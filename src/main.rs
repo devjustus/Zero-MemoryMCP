@@ -1,6 +1,10 @@
+mod core;
+
 use anyhow::Result;
 use tracing::{info, Level};
 use tracing_subscriber;
+
+use crate::core::{Address, MemoryValue, ProcessInfo};
 
 #[tokio::main]
 async fn main() -> Result<()> {
