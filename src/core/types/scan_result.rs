@@ -1,8 +1,8 @@
 //! Scan result and session types
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use super::{Address, MemoryValue};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Result from a memory scan operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +64,7 @@ impl ScanSession {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         ScanSession {
             id,
             scan_type,
@@ -87,7 +87,7 @@ impl ScanSession {
     }
 
     /// Filters results based on a predicate
-    pub fn filter_results<F>(&mut self, predicate: F) 
+    pub fn filter_results<F>(&mut self, predicate: F)
     where
         F: Fn(&ScanResult) -> bool,
     {

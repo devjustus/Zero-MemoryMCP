@@ -4,17 +4,17 @@
 //! including address wrappers, memory values, process information, and error types.
 
 mod address;
-mod value;
+mod error;
 mod process_info;
 mod scan_result;
-mod error;
+mod value;
 
 // Re-export all public types
 pub use address::Address;
-pub use value::MemoryValue;
-pub use process_info::{ProcessInfo, ProcessArchitecture, ModuleInfo};
-pub use scan_result::{ScanResult, ScanSession, ScanType, ValueType};
 pub use error::{MemoryError, MemoryResult};
+pub use process_info::{ModuleInfo, ProcessArchitecture, ProcessInfo};
+pub use scan_result::{ScanResult, ScanSession, ScanType, ValueType};
+pub use value::MemoryValue;
 
 // Common type aliases
 pub type ProcessId = u32;

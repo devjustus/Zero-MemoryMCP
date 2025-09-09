@@ -124,6 +124,9 @@ mod tests {
         assert_eq!(err.to_string(), "Invalid memory address: 0xDEADBEEF");
 
         let err = MemoryError::access_denied(1234, "SeDebugPrivilege required");
-        assert_eq!(err.to_string(), "Access denied to process 1234: SeDebugPrivilege required");
+        assert_eq!(
+            err.to_string(),
+            "Access denied to process 1234: SeDebugPrivilege required"
+        );
     }
 }

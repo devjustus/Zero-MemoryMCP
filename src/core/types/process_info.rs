@@ -1,8 +1,8 @@
 //! Process information types
 
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use super::{Address, ProcessId, ThreadId};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Information about a running process
 #[derive(Debug, Clone, Serialize, Deserialize)]

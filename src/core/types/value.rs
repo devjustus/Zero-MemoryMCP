@@ -1,7 +1,7 @@
 //! Memory value enum for handling different data types
 
-use std::fmt;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Represents different types of values that can be stored in memory
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,7 +66,7 @@ impl MemoryValue {
             ValueType::I32 => {
                 if bytes.len() >= 4 {
                     Some(MemoryValue::I32(i32::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3]
+                        bytes[0], bytes[1], bytes[2], bytes[3],
                     ])))
                 } else {
                     None
@@ -75,8 +75,8 @@ impl MemoryValue {
             ValueType::I64 => {
                 if bytes.len() >= 8 {
                     Some(MemoryValue::I64(i64::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3],
-                        bytes[4], bytes[5], bytes[6], bytes[7]
+                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6],
+                        bytes[7],
                     ])))
                 } else {
                     None
@@ -93,7 +93,7 @@ impl MemoryValue {
             ValueType::U32 => {
                 if bytes.len() >= 4 {
                     Some(MemoryValue::U32(u32::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3]
+                        bytes[0], bytes[1], bytes[2], bytes[3],
                     ])))
                 } else {
                     None
@@ -102,8 +102,8 @@ impl MemoryValue {
             ValueType::U64 => {
                 if bytes.len() >= 8 {
                     Some(MemoryValue::U64(u64::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3],
-                        bytes[4], bytes[5], bytes[6], bytes[7]
+                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6],
+                        bytes[7],
                     ])))
                 } else {
                     None
@@ -112,7 +112,7 @@ impl MemoryValue {
             ValueType::F32 => {
                 if bytes.len() >= 4 {
                     Some(MemoryValue::F32(f32::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3]
+                        bytes[0], bytes[1], bytes[2], bytes[3],
                     ])))
                 } else {
                     None
@@ -121,19 +121,17 @@ impl MemoryValue {
             ValueType::F64 => {
                 if bytes.len() >= 8 {
                     Some(MemoryValue::F64(f64::from_le_bytes([
-                        bytes[0], bytes[1], bytes[2], bytes[3],
-                        bytes[4], bytes[5], bytes[6], bytes[7]
+                        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6],
+                        bytes[7],
                     ])))
                 } else {
                     None
                 }
             }
             ValueType::Bytes => Some(MemoryValue::Bytes(bytes.to_vec())),
-            ValueType::String => {
-                String::from_utf8(bytes.to_vec())
-                    .ok()
-                    .map(MemoryValue::String)
-            }
+            ValueType::String => String::from_utf8(bytes.to_vec())
+                .ok()
+                .map(MemoryValue::String),
         }
     }
 
@@ -220,9 +218,15 @@ mod tests {
 
     #[test]
     fn test_value_to_bytes() {
-        assert_eq!(MemoryValue::U32(0x12345678).to_bytes(), vec![0x78, 0x56, 0x34, 0x12]);
+        assert_eq!(
+            MemoryValue::U32(0x12345678).to_bytes(),
+            vec![0x78, 0x56, 0x34, 0x12]
+        );
         assert_eq!(MemoryValue::I8(-1).to_bytes(), vec![0xFF]);
-        assert_eq!(MemoryValue::String("Hi".to_string()).to_bytes(), vec![b'H', b'i']);
+        assert_eq!(
+            MemoryValue::String("Hi".to_string()).to_bytes(),
+            vec![b'H', b'i']
+        );
     }
 
     #[test]

@@ -1,11 +1,12 @@
 //! Memory address wrapper type with hex parsing and validation
 
+use super::error::{MemoryError, MemoryResult};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
-use super::error::{MemoryError, MemoryResult};
 
 /// Represents a memory address with type-safe operations
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Address(pub usize);
 
 impl Address {
@@ -71,7 +72,7 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
-        
+
         // Handle hex prefix variations
         let value = if s.starts_with("0x") || s.starts_with("0X") {
             usize::from_str_radix(&s[2..], 16)
@@ -82,8 +83,7 @@ impl FromStr for Address {
             usize::from_str_radix(s, 16)
         } else {
             // Try decimal first, then hex
-            s.parse::<usize>()
-                .or_else(|_| usize::from_str_radix(s, 16))
+            s.parse::<usize>().or_else(|_| usize::from_str_radix(s, 16))
         };
 
         value
@@ -143,7 +143,10 @@ mod tests {
         assert_eq!(Address::from_str("0x1000").unwrap(), Address::new(0x1000));
         assert_eq!(Address::from_str("0X1000").unwrap(), Address::new(0x1000));
         assert_eq!(Address::from_str("$1000").unwrap(), Address::new(0x1000));
-        assert_eq!(Address::from_str("DEADBEEF").unwrap(), Address::new(0xDEADBEEF));
+        assert_eq!(
+            Address::from_str("DEADBEEF").unwrap(),
+            Address::new(0xDEADBEEF)
+        );
         assert_eq!(Address::from_str("4096").unwrap(), Address::new(4096));
     }
 
@@ -153,7 +156,7 @@ mod tests {
         assert!(!addr.is_aligned(4));
         assert_eq!(addr.align_down(4), Address::new(0x1004));
         assert_eq!(addr.align_up(4), Address::new(0x1008));
-        
+
         let aligned = Address::new(0x1000);
         assert!(aligned.is_aligned(16));
     }
