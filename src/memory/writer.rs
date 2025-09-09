@@ -20,6 +20,11 @@ impl MemoryWriter {
 
     /// Write raw bytes to memory
     pub fn write_bytes(&self, address: Address, data: &[u8]) -> MemoryResult<()> {
+        // Early return for empty data
+        if data.is_empty() {
+            return Ok(());
+        }
+        
         unsafe {
             let handle = &*self.handle;
             let bytes_written = handle.write_memory(address.as_usize(), data)?;
@@ -103,6 +108,11 @@ impl MemoryWriter {
         destination: Address,
         size: usize,
     ) -> MemoryResult<()> {
+        // Early return for zero size
+        if size == 0 {
+            return Ok(());
+        }
+        
         // Read from source
         let mut buffer = vec![0u8; size];
         unsafe {
@@ -116,6 +126,11 @@ impl MemoryWriter {
 
     /// Swap two memory regions
     pub fn swap_memory(&self, addr1: Address, addr2: Address, size: usize) -> MemoryResult<()> {
+        // Early return for zero size
+        if size == 0 {
+            return Ok(());
+        }
+        
         // Read both regions
         let mut buffer1 = vec![0u8; size];
         let mut buffer2 = vec![0u8; size];

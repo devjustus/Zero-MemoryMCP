@@ -157,7 +157,9 @@ fn test_scan_pattern_comprehensive() {
 
     for pattern_str in &invalid_patterns {
         let pattern = ScanPattern::from_hex_string(pattern_str);
-        assert!(pattern.is_err());
+        if !pattern.is_err() {
+            panic!("Pattern '{}' should have returned an error but got: {:?}", pattern_str, pattern);
+        }
     }
 }
 
