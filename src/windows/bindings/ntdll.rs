@@ -190,6 +190,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_null_handle_queries() {
         unsafe {
             // Querying with null handle should fail
@@ -213,5 +214,51 @@ mod tests {
         assert_eq!(ProcessInfoClass::ProcessBasicInformation as u32, 0);
         assert_eq!(ProcessInfoClass::ProcessDebugPort as u32, 7);
         assert_eq!(ProcessInfoClass::ProcessWow64Information as u32, 26);
+    }
+
+    #[test]
+    fn test_memory_info_class_values() {
+        // Verify memory info class enum values
+        assert_eq!(MemoryInfoClass::MemoryBasicInformation as u32, 0);
+        assert_eq!(MemoryInfoClass::MemoryWorkingSetList as u32, 1);
+        assert_eq!(MemoryInfoClass::MemoryMappedFilenameInformation as u32, 2);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_get_current_process() {
+        // Test current process handle is valid
+        use winapi::um::processthreadsapi::GetCurrentProcess;
+        let handle = unsafe { GetCurrentProcess() };
+        assert!(!handle.is_null());
+        // Current process pseudo-handle is always -1
+        assert_eq!(handle as isize, -1);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_query_with_invalid_addresses() {
+        unsafe {
+            use winapi::um::processthreadsapi::GetCurrentProcess;
+            let current_process = GetCurrentProcess();
+
+            // Test with invalid addresses
+            let result = query_virtual_memory(current_process, usize::MAX);
+            // This might succeed or fail depending on the system, just check it doesn't crash
+            let _ = result;
+
+            let result = query_virtual_memory(current_process, 0);
+            // Address 0 is typically invalid but might not error on all systems
+            let _ = result;
+        }
+    }
+
+    #[test]
+    fn test_status_codes() {
+        // Test various status codes
+        assert!(nt_success(0)); // STATUS_SUCCESS
+        assert!(!nt_success(0xC0000005u32 as i32)); // STATUS_ACCESS_VIOLATION
+        assert!(!nt_success(0xC000000Du32 as i32)); // STATUS_INVALID_PARAMETER
+        assert!(!nt_success(0x80000000u32 as i32)); // High bit set indicates error
     }
 }

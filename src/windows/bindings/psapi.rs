@@ -142,6 +142,7 @@ mod tests {
     use std::ptr;
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_enum_processes() {
         // Should be able to enumerate processes (at least System process)
         let result = enum_processes();
@@ -155,6 +156,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_null_handle_operations() {
         unsafe {
             // Operations with null handle should fail
@@ -169,6 +171,37 @@ mod tests {
 
             let result = get_process_image_filename(ptr::null_mut());
             assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_invalid_module_operations() {
+        unsafe {
+            // Test with invalid module handle
+            let invalid_module = 0xDEADBEEF as HMODULE;
+            let current_process = winapi::um::processthreadsapi::GetCurrentProcess();
+
+            let result = get_module_information(current_process, invalid_module);
+            assert!(result.is_err());
+
+            let result = get_module_base_name(current_process, invalid_module);
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_process_enumeration_max_count() {
+        // Test that we handle the maximum process count properly
+        let result = enum_processes();
+        assert!(result.is_ok());
+
+        if let Ok(pids) = result {
+            // Should not exceed MAX_PROCESSES
+            assert!(pids.len() <= 1024);
+            // Should have at least some processes
+            assert!(pids.len() > 0);
         }
     }
 }

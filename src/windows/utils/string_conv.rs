@@ -89,4 +89,40 @@ mod tests {
             "C:\\Windows\\System32"
         );
     }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "Unsafe pointer operations")]
+    fn test_wide_ptr_to_string() {
+        // Test null pointer
+        unsafe {
+            assert_eq!(wide_ptr_to_string(std::ptr::null()), "");
+        }
+
+        // Test valid string
+        let wide_str = vec![72u16, 101, 108, 108, 111, 0]; // "Hello\0"
+        unsafe {
+            assert_eq!(wide_ptr_to_string(wide_str.as_ptr()), "Hello");
+        }
+    }
+
+    #[test]
+    fn test_unicode_strings() {
+        // Test unicode characters
+        let unicode_str = "Hello 世界 🌍";
+        let wide = string_to_wide(unicode_str);
+        let back = wide_to_string(&wide);
+        assert_eq!(back, unicode_str);
+    }
+
+    #[test]
+    fn test_path_edge_cases() {
+        // Test various path formats
+        assert_eq!(extract_filename("C:\\"), "");
+        assert_eq!(extract_filename("\\\\server\\share\\file.txt"), "file.txt");
+        assert_eq!(
+            normalize_path("C:/Windows//System32"),
+            "C:\\Windows\\\\System32"
+        );
+        assert_eq!(normalize_path("/usr/local/bin"), "\\usr\\local\\bin");
+    }
 }
