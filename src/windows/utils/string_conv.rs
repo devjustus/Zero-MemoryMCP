@@ -38,7 +38,7 @@ pub unsafe fn wide_ptr_to_string(ptr: *const u16) -> String {
 
 /// Extract filename from full path
 pub fn extract_filename(path: &str) -> String {
-    path.split('\\').next_back().unwrap_or(path).to_string()
+    path.rsplit('\\').next().unwrap_or(path).to_string()
 }
 
 /// Normalize Windows path

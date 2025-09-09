@@ -81,4 +81,27 @@ mod tests {
         }
         // Should not crash
     }
+
+    #[test]
+    fn test_handle_with_non_null() {
+        // Test with a non-null but invalid handle value
+        let handle = Handle::new(0x12345678 as HANDLE);
+        assert!(!handle.is_null());
+        assert_eq!(handle.raw(), 0x12345678 as HANDLE);
+
+        // Take ownership to prevent drop from trying to close invalid handle
+        let raw = handle.take();
+        assert_eq!(raw, 0x12345678 as HANDLE);
+    }
+
+    #[test]
+    fn test_handle_drop_with_value() {
+        // Test that drop is called with non-null handle
+        {
+            let mut handle = Handle::new(0xDEADBEEF as HANDLE);
+            // Manually set to null before drop to prevent actual close attempt
+            handle.handle = ptr::null_mut();
+        }
+        // Should not crash
+    }
 }

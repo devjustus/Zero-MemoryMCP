@@ -77,4 +77,155 @@ mod tests {
         assert!(info.is_readable());
         assert!(info.is_writable());
     }
+
+    #[test]
+    fn test_from_memory_basic_information() {
+        use std::mem;
+
+        let mut mbi: MEMORY_BASIC_INFORMATION = unsafe { mem::zeroed() };
+        mbi.BaseAddress = 0x2000 as *mut _;
+        mbi.AllocationBase = 0x1000 as *mut _;
+        mbi.AllocationProtect = 0x20;
+        mbi.RegionSize = 8192;
+        mbi.State = 0x2000; // MEM_RESERVE
+        mbi.Protect = 0x01; // PAGE_NOACCESS
+        mbi.Type = 0x40000;
+
+        let info = MemoryBasicInfo::from(mbi);
+        assert_eq!(info.base_address, Address::new(0x2000));
+        assert_eq!(info.allocation_base, Address::new(0x1000));
+        assert_eq!(info.allocation_protect, 0x20);
+        assert_eq!(info.region_size, 8192);
+        assert_eq!(info.state, 0x2000);
+        assert_eq!(info.protect, 0x01);
+        assert_eq!(info.type_flags, 0x40000);
+    }
+
+    #[test]
+    fn test_is_committed() {
+        let mut info = MemoryBasicInfo {
+            base_address: Address::new(0x1000),
+            allocation_base: Address::new(0x1000),
+            allocation_protect: 0x04,
+            region_size: 4096,
+            state: 0x1000, // MEM_COMMIT
+            protect: 0x04,
+            type_flags: 0x20000,
+        };
+
+        assert!(info.is_committed());
+
+        // Test with MEM_RESERVE
+        info.state = 0x2000;
+        assert!(!info.is_committed());
+
+        // Test with MEM_FREE
+        info.state = 0x10000;
+        assert!(!info.is_committed());
+    }
+
+    #[test]
+    fn test_is_readable() {
+        let mut info = MemoryBasicInfo {
+            base_address: Address::new(0x1000),
+            allocation_base: Address::new(0x1000),
+            allocation_protect: 0x04,
+            region_size: 4096,
+            state: 0x1000,
+            protect: 0x04, // PAGE_READWRITE
+            type_flags: 0x20000,
+        };
+
+        assert!(info.is_readable());
+
+        // Test with PAGE_NOACCESS
+        info.protect = 0x01;
+        assert!(!info.is_readable());
+
+        // Test with PAGE_GUARD
+        info.protect = 0x104; // PAGE_READWRITE | PAGE_GUARD
+        assert!(!info.is_readable());
+
+        // Test with PAGE_READONLY
+        info.protect = 0x02;
+        assert!(info.is_readable());
+
+        // Test with PAGE_EXECUTE_READ
+        info.protect = 0x20;
+        assert!(info.is_readable());
+    }
+
+    #[test]
+    fn test_is_writable() {
+        let mut info = MemoryBasicInfo {
+            base_address: Address::new(0x1000),
+            allocation_base: Address::new(0x1000),
+            allocation_protect: 0x04,
+            region_size: 4096,
+            state: 0x1000,
+            protect: 0x04, // PAGE_READWRITE
+            type_flags: 0x20000,
+        };
+
+        assert!(info.is_writable());
+
+        // Test with PAGE_READONLY
+        info.protect = 0x02;
+        assert!(!info.is_writable());
+
+        // Test with PAGE_WRITECOPY
+        info.protect = 0x08;
+        assert!(info.is_writable());
+
+        // Test with PAGE_EXECUTE_READWRITE
+        info.protect = 0x40;
+        assert!(info.is_writable());
+
+        // Test with PAGE_EXECUTE_WRITECOPY
+        info.protect = 0x80;
+        assert!(info.is_writable());
+
+        // Test with PAGE_NOACCESS
+        info.protect = 0x01;
+        assert!(!info.is_writable());
+
+        // Test with PAGE_EXECUTE
+        info.protect = 0x10;
+        assert!(!info.is_writable());
+    }
+
+    #[test]
+    fn test_memory_info_clone() {
+        let info = MemoryBasicInfo {
+            base_address: Address::new(0x1000),
+            allocation_base: Address::new(0x1000),
+            allocation_protect: 0x04,
+            region_size: 4096,
+            state: 0x1000,
+            protect: 0x04,
+            type_flags: 0x20000,
+        };
+
+        let cloned = info.clone();
+        assert_eq!(cloned.base_address, info.base_address);
+        assert_eq!(cloned.allocation_base, info.allocation_base);
+        assert_eq!(cloned.region_size, info.region_size);
+    }
+
+    #[test]
+    fn test_memory_info_debug() {
+        let info = MemoryBasicInfo {
+            base_address: Address::new(0x1000),
+            allocation_base: Address::new(0x1000),
+            allocation_protect: 0x04,
+            region_size: 4096,
+            state: 0x1000,
+            protect: 0x04,
+            type_flags: 0x20000,
+        };
+
+        let debug_str = format!("{:?}", info);
+        assert!(debug_str.contains("MemoryBasicInfo"));
+        assert!(debug_str.contains("base_address"));
+    }
 }
