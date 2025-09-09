@@ -119,11 +119,8 @@ impl<'a> MemoryReader<'a> {
 
         self.handle.read_memory(address.as_usize(), &mut buffer)?;
 
-
-        // Safety: We're reading exactly size_of::<T>() bytes  
-        unsafe {
-            Ok(*(buffer.as_ptr() as *const T))
-        }
+        // Safety: We're reading exactly size_of::<T>() bytes
+        unsafe { Ok(*(buffer.as_ptr() as *const T)) }
     }
 
     /// Read a null-terminated string from memory
@@ -144,7 +141,8 @@ impl<'a> MemoryReader<'a> {
         let byte_size = max_len * 2;
         let mut byte_buffer = vec![0u8; byte_size];
 
-        self.handle.read_memory(address.as_usize(), &mut byte_buffer)?;
+        self.handle
+            .read_memory(address.as_usize(), &mut byte_buffer)?;
 
         // Convert bytes to u16 array
         for i in 0..max_len {

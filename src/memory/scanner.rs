@@ -153,9 +153,7 @@ pub struct MemoryScanner<'a> {
 impl<'a> MemoryScanner<'a> {
     /// Create a new memory scanner
     pub fn new(handle: &'a ProcessHandle) -> Self {
-        MemoryScanner {
-            handle,
-        }
+        MemoryScanner { handle }
     }
 
     /// Scan memory for a pattern
@@ -230,7 +228,10 @@ impl<'a> MemoryScanner<'a> {
         for (addr, old_value) in previous {
             let mut new_value = vec![0u8; old_value.len()];
 
-            if self.handle.read_memory(addr.as_usize(), &mut new_value).is_ok()
+            if self
+                .handle
+                .read_memory(addr.as_usize(), &mut new_value)
+                .is_ok()
                 && self.compare_values(old_value, &new_value, &comparison)
             {
                 results.push(*addr);
@@ -247,43 +248,42 @@ impl<'a> MemoryScanner<'a> {
 
         while current < end {
             match unsafe { kernel32::virtual_query_ex(self.handle.raw(), current.as_usize()) } {
-                    Ok(mbi) => {
-                        const MEM_COMMIT: u32 = 0x1000;
-                        const PAGE_EXECUTE: u32 = 0x10;
-                        const PAGE_EXECUTE_READ: u32 = 0x20;
-                        const PAGE_EXECUTE_READWRITE: u32 = 0x40;
-                        const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
-                        const PAGE_READWRITE: u32 = 0x04;
-                        const PAGE_WRITECOPY: u32 = 0x08;
+                Ok(mbi) => {
+                    const MEM_COMMIT: u32 = 0x1000;
+                    const PAGE_EXECUTE: u32 = 0x10;
+                    const PAGE_EXECUTE_READ: u32 = 0x20;
+                    const PAGE_EXECUTE_READWRITE: u32 = 0x40;
+                    const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
+                    const PAGE_READWRITE: u32 = 0x04;
+                    const PAGE_WRITECOPY: u32 = 0x08;
 
-                        if mbi.State == MEM_COMMIT {
-                            let is_executable = mbi.Protect
-                                & (PAGE_EXECUTE
-                                    | PAGE_EXECUTE_READ
-                                    | PAGE_EXECUTE_READWRITE
-                                    | PAGE_EXECUTE_WRITECOPY)
-                                != 0;
-                            let is_writable = mbi.Protect
-                                & (PAGE_READWRITE
-                                    | PAGE_WRITECOPY
-                                    | PAGE_EXECUTE_READWRITE
-                                    | PAGE_EXECUTE_WRITECOPY)
-                                != 0;
+                    if mbi.State == MEM_COMMIT {
+                        let is_executable = mbi.Protect
+                            & (PAGE_EXECUTE
+                                | PAGE_EXECUTE_READ
+                                | PAGE_EXECUTE_READWRITE
+                                | PAGE_EXECUTE_WRITECOPY)
+                            != 0;
+                        let is_writable = mbi.Protect
+                            & (PAGE_READWRITE
+                                | PAGE_WRITECOPY
+                                | PAGE_EXECUTE_READWRITE
+                                | PAGE_EXECUTE_WRITECOPY)
+                            != 0;
 
-                            let include = (!options.executable_only || is_executable)
-                                && (!options.writable_only || is_writable);
+                        let include = (!options.executable_only || is_executable)
+                            && (!options.writable_only || is_writable);
 
-                            if include {
-                                regions
-                                    .push((Address::new(mbi.BaseAddress as usize), mbi.RegionSize));
-                            }
+                        if include {
+                            regions.push((Address::new(mbi.BaseAddress as usize), mbi.RegionSize));
                         }
-
-                        current = Address::new(mbi.BaseAddress as usize + mbi.RegionSize);
                     }
-                    Err(_) => break,
+
+                    current = Address::new(mbi.BaseAddress as usize + mbi.RegionSize);
                 }
+                Err(_) => break,
             }
+        }
 
         Ok(regions)
     }

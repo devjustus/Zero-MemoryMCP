@@ -26,7 +26,7 @@ fn get_test_handle() -> ProcessHandle {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_creation() {
     let handle = get_test_handle();
-    let mut ops = MemoryOperations::new(handle);
+    let ops = MemoryOperations::new(handle);
 
     // Test accessor methods
     assert!(ops.reader().cache_size() == 0);

@@ -138,7 +138,7 @@ fn test_scan_pattern_comprehensive() {
 
     for pattern in &patterns {
         assert!(!pattern.is_empty());
-        assert!(pattern.len() > 0);
+        assert!(!pattern.is_empty());
     }
 
     // Test hex string parsing edge cases
@@ -157,7 +157,7 @@ fn test_scan_pattern_comprehensive() {
 
     for pattern_str in &invalid_patterns {
         let pattern = ScanPattern::from_hex_string(pattern_str);
-        if !pattern.is_err() {
+        if pattern.is_ok() {
             panic!(
                 "Pattern '{}' should have returned an error but got: {:?}",
                 pattern_str, pattern
@@ -228,8 +228,8 @@ fn test_memory_scanner_comprehensive() {
         let result = scanner.scan(&pattern, options.clone());
         // In CI environments, scanning may fail due to permissions
         // We accept both success and permission errors
-        if result.is_err() {
-            match result.unwrap_err() {
+        if let Err(err) = result {
+            match err {
                 MemoryError::AccessDenied { .. }
                 | MemoryError::ProcessNotFound(_)
                 | MemoryError::ReadFailed { .. } => {
@@ -243,8 +243,8 @@ fn test_memory_scanner_comprehensive() {
     // Test find_value with different types
     let result = scanner.find_value(42u8, ScanOptions::default());
     // In CI environments, scanning may fail due to permissions
-    if result.is_err() {
-        match result.unwrap_err() {
+    if let Err(err) = result {
+        match err {
             MemoryError::AccessDenied { .. }
             | MemoryError::ProcessNotFound(_)
             | MemoryError::ReadFailed { .. } => {
@@ -255,8 +255,8 @@ fn test_memory_scanner_comprehensive() {
     }
 
     let result = scanner.find_value(0xDEADBEEFu32, ScanOptions::default());
-    if result.is_err() {
-        match result.unwrap_err() {
+    if let Err(err) = result {
+        match err {
             MemoryError::AccessDenied { .. }
             | MemoryError::ProcessNotFound(_)
             | MemoryError::ReadFailed { .. } => {
@@ -267,8 +267,8 @@ fn test_memory_scanner_comprehensive() {
     }
 
     let result = scanner.find_value(std::f32::consts::PI, ScanOptions::default());
-    if result.is_err() {
-        match result.unwrap_err() {
+    if let Err(err) = result {
+        match err {
             MemoryError::AccessDenied { .. }
             | MemoryError::ProcessNotFound(_)
             | MemoryError::ReadFailed { .. } => {
@@ -306,8 +306,8 @@ fn test_memory_operations_comprehensive() {
     let result = ops.scan(&empty_pattern, ScanOptions::default());
     // In CI environments, scanning may fail due to permissions
     // Empty pattern should return empty results or permission error
-    if result.is_err() {
-        match result.unwrap_err() {
+    if let Err(err) = result {
+        match err {
             MemoryError::AccessDenied { .. }
             | MemoryError::ProcessNotFound(_)
             | MemoryError::ReadFailed { .. } => {
@@ -431,12 +431,12 @@ fn test_memory_value_conversions() {
 
         // Test pattern matching
         match value {
-            MemoryValue::U8(v) => assert!(*v <= 255),
-            MemoryValue::U16(v) => assert!(*v <= 65535),
+            MemoryValue::U8(_) => {}
+            MemoryValue::U16(_) => {}
             MemoryValue::U32(_) => {}
             MemoryValue::U64(_) => {}
-            MemoryValue::I8(v) => assert!(*v >= -128 && *v <= 127),
-            MemoryValue::I16(v) => assert!(*v >= -32768 && *v <= 32767),
+            MemoryValue::I8(_) => {}
+            MemoryValue::I16(_) => {}
             MemoryValue::I32(_) => {}
             MemoryValue::I64(_) => {}
             MemoryValue::F32(_) => {}

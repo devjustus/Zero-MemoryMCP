@@ -13,9 +13,7 @@ pub struct MemoryWriter<'a> {
 impl<'a> MemoryWriter<'a> {
     /// Create a new memory writer
     pub fn new(handle: &'a ProcessHandle) -> Self {
-        MemoryWriter {
-            handle,
-        }
+        MemoryWriter { handle }
     }
 
     /// Write raw bytes to memory

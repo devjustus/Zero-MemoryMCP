@@ -27,9 +27,7 @@ pub struct MemoryOperations {
 impl MemoryOperations {
     /// Create new memory operations context for a process
     pub fn new(handle: ProcessHandle) -> Self {
-        MemoryOperations {
-            handle,
-        }
+        MemoryOperations { handle }
     }
 
     /// Get a reference to the memory reader
