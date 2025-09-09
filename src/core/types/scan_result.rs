@@ -168,7 +168,8 @@ mod tests {
 
     #[test]
     fn test_scan_result_with_region_info() {
-        let mut result = ScanResult::new(Address::new(0x3000), MemoryValue::F32(3.14));
+        let mut result =
+            ScanResult::new(Address::new(0x3000), MemoryValue::F32(std::f32::consts::PI));
         let region = RegionInfo {
             base_address: Address::new(0x3000),
             size: 0x1000,
@@ -304,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_clone_and_debug() {
-        let result = ScanResult::new(Address::new(0x6000), MemoryValue::F64(2.718));
+        let result = ScanResult::new(Address::new(0x6000), MemoryValue::F64(std::f64::consts::E));
         let cloned = result.clone();
         assert_eq!(result.address, cloned.address);
 

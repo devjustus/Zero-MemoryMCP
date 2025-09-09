@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_clone_and_copy() {
         let original = Address::new(0x1234);
-        let cloned = original.clone();
+        let cloned = original;
         let copied = original;
 
         assert_eq!(original, cloned);

@@ -73,7 +73,7 @@ fn test_memory_value_conversions() {
     let test_values = vec![
         (MemoryValue::U32(0x12345678), ValueType::U32, 4),
         (MemoryValue::I64(-999999), ValueType::I64, 8),
-        (MemoryValue::F32(3.14159), ValueType::F32, 4),
+        (MemoryValue::F32(std::f32::consts::PI), ValueType::F32, 4),
         (
             MemoryValue::String("test".to_string()),
             ValueType::String,
@@ -231,8 +231,8 @@ fn test_value_type_matching() {
         (MemoryValue::U16(65535), ValueType::U16),
         (MemoryValue::U32(4294967295), ValueType::U32),
         (MemoryValue::U64(18446744073709551615), ValueType::U64),
-        (MemoryValue::F32(3.14), ValueType::F32),
-        (MemoryValue::F64(2.718), ValueType::F64),
+        (MemoryValue::F32(std::f32::consts::PI), ValueType::F32),
+        (MemoryValue::F64(std::f64::consts::E), ValueType::F64),
         (MemoryValue::String("hello".to_string()), ValueType::String),
         (MemoryValue::Bytes(vec![1, 2, 3]), ValueType::Bytes),
     ];

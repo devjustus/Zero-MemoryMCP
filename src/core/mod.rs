@@ -66,7 +66,7 @@ mod tests {
         let i64_val = MemoryValue::I64(999999);
         assert_eq!(i64_val.size(), 8);
 
-        let f32_val = MemoryValue::F32(3.14);
+        let f32_val = MemoryValue::F32(std::f32::consts::PI);
         assert_eq!(f32_val.size(), 4);
 
         let bytes_val = MemoryValue::Bytes(vec![1, 2, 3, 4]);
