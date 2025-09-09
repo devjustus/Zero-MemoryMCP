@@ -258,6 +258,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)] // Miri doesn't support GetTempPathW Windows API
     fn test_save_and_load() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("test.toml");
