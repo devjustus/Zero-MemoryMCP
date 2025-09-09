@@ -129,4 +129,180 @@ mod tests {
             "Access denied to process 1234: SeDebugPrivilege required"
         );
     }
+
+    #[test]
+    fn test_all_error_variants() {
+        let errors: Vec<(MemoryError, &str)> = vec![
+            (
+                MemoryError::InvalidAddress("0x123".to_string()),
+                "Invalid memory address: 0x123",
+            ),
+            (
+                MemoryError::ProcessNotFound("notepad.exe".to_string()),
+                "Process not found: notepad.exe",
+            ),
+            (
+                MemoryError::AccessDenied {
+                    pid: 999,
+                    reason: "denied".to_string(),
+                },
+                "Access denied to process 999: denied",
+            ),
+            (
+                MemoryError::ReadFailed {
+                    address: "0x1000".to_string(),
+                    reason: "page fault".to_string(),
+                },
+                "Failed to read memory at 0x1000: page fault",
+            ),
+            (
+                MemoryError::WriteFailed {
+                    address: "0x2000".to_string(),
+                    reason: "write protected".to_string(),
+                },
+                "Failed to write memory at 0x2000: write protected",
+            ),
+            (
+                MemoryError::InvalidValueType("unknown".to_string()),
+                "Invalid value type: unknown",
+            ),
+            (
+                MemoryError::SessionNotFound("session123".to_string()),
+                "Scan session not found: session123",
+            ),
+            (
+                MemoryError::ModuleNotFound("kernel32.dll".to_string()),
+                "Module not found: kernel32.dll",
+            ),
+            (
+                MemoryError::PatternNotFound,
+                "Pattern not found in memory",
+            ),
+            (
+                MemoryError::InvalidPattern("?? ?? XX".to_string()),
+                "Invalid pattern format: ?? ?? XX",
+            ),
+            (
+                MemoryError::PointerChainBroken {
+                    level: 3,
+                    reason: "null pointer".to_string(),
+                },
+                "Pointer chain broken at level 3: null pointer",
+            ),
+            (
+                MemoryError::InsufficientPrivileges("admin required".to_string()),
+                "Insufficient privileges: admin required",
+            ),
+            (
+                MemoryError::ProtectionError("PAGE_NOACCESS".to_string()),
+                "Memory protection error: PAGE_NOACCESS",
+            ),
+            (
+                MemoryError::BufferTooSmall {
+                    expected: 100,
+                    actual: 50,
+                },
+                "Buffer too small: expected 100, got 50",
+            ),
+            (
+                MemoryError::UnsupportedOperation("AOB scan".to_string()),
+                "Unsupported operation: AOB scan",
+            ),
+            (
+                MemoryError::Unknown("something went wrong".to_string()),
+                "Unknown error: something went wrong",
+            ),
+        ];
+
+        for (error, expected) in errors {
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn test_helper_methods() {
+        let err = MemoryError::access_denied(42, "test reason");
+        match err {
+            MemoryError::AccessDenied { pid, reason } => {
+                assert_eq!(pid, 42);
+                assert_eq!(reason, "test reason");
+            }
+            _ => panic!("Wrong error type"),
+        }
+
+        let err = MemoryError::read_failed("0xABCD", "invalid page");
+        match err {
+            MemoryError::ReadFailed { address, reason } => {
+                assert_eq!(address, "0xABCD");
+                assert_eq!(reason, "invalid page");
+            }
+            _ => panic!("Wrong error type"),
+        }
+
+        let err = MemoryError::write_failed("0xDEAD", "protected memory");
+        match err {
+            MemoryError::WriteFailed { address, reason } => {
+                assert_eq!(address, "0xDEAD");
+                assert_eq!(reason, "protected memory");
+            }
+            _ => panic!("Wrong error type"),
+        }
+
+        let err = MemoryError::pointer_chain_broken(5, "dereferenced null");
+        match err {
+            MemoryError::PointerChainBroken { level, reason } => {
+                assert_eq!(level, 5);
+                assert_eq!(reason, "dereferenced null");
+            }
+            _ => panic!("Wrong error type"),
+        }
+
+        let err = MemoryError::buffer_too_small(256, 128);
+        match err {
+            MemoryError::BufferTooSmall { expected, actual } => {
+                assert_eq!(expected, 256);
+                assert_eq!(actual, 128);
+            }
+            _ => panic!("Wrong error type"),
+        }
+    }
+
+    #[test]
+    fn test_from_implementations() {
+        use std::io;
+
+        let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "test");
+        let mem_err: MemoryError = io_err.into();
+        assert!(matches!(mem_err, MemoryError::IoError(_)));
+
+        let json_err = serde_json::from_str::<String>("invalid json").unwrap_err();
+        let mem_err: MemoryError = json_err.into();
+        assert!(matches!(mem_err, MemoryError::JsonError(_)));
+
+        let utf8_err = String::from_utf8(vec![0xFF, 0xFE, 0xFD]).unwrap_err();
+        let mem_err: MemoryError = utf8_err.into();
+        assert!(matches!(mem_err, MemoryError::Utf8Error(_)));
+    }
+
+    #[test]
+    fn test_memory_result_type() {
+        fn example_function() -> MemoryResult<u32> {
+            Ok(42)
+        }
+
+        fn failing_function() -> MemoryResult<u32> {
+            Err(MemoryError::Unknown("test".to_string()))
+        }
+
+        assert_eq!(example_function().unwrap(), 42);
+        assert!(failing_function().is_err());
+    }
+
+    #[test]
+    fn test_error_debug_format() {
+        let err = MemoryError::InvalidAddress("test".to_string());
+        let debug_str = format!("{:?}", err);
+        assert!(debug_str.contains("InvalidAddress"));
+        assert!(debug_str.contains("test"));
+    }
 }

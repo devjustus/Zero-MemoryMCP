@@ -175,4 +175,116 @@ mod tests {
         assert_eq!(format!("{:x}", addr), "0x00000000deadbeef");
         assert_eq!(format!("{:X}", addr), "0x00000000DEADBEEF");
     }
+
+    #[test]
+    fn test_null_address() {
+        let null = Address::null();
+        assert!(null.is_null());
+        assert_eq!(null.as_usize(), 0);
+        
+        let non_null = Address::new(1);
+        assert!(!non_null.is_null());
+    }
+
+    #[test]
+    fn test_from_implementations() {
+        let from_usize = Address::from(0x1234usize);
+        assert_eq!(from_usize, Address::new(0x1234));
+        
+        let from_u64 = Address::from(0x5678u64);
+        assert_eq!(from_u64, Address::new(0x5678));
+        
+        let ptr: *const u8 = 0x9ABC as *const u8;
+        let from_const_ptr = Address::from(ptr);
+        assert_eq!(from_const_ptr, Address::new(0x9ABC));
+        
+        let mut_ptr: *mut u8 = 0xDEF0 as *mut u8;
+        let from_mut_ptr = Address::from(mut_ptr);
+        assert_eq!(from_mut_ptr, Address::new(0xDEF0));
+    }
+
+    #[test]
+    fn test_as_ptr_conversions() {
+        let addr = Address::new(0x1000);
+        let const_ptr = addr.as_ptr::<u8>();
+        assert_eq!(const_ptr as usize, 0x1000);
+        
+        let mut_ptr = addr.as_mut_ptr::<u32>();
+        assert_eq!(mut_ptr as usize, 0x1000);
+    }
+
+    #[test]
+    fn test_parsing_edge_cases() {
+        assert_eq!(Address::from_str("  0x1000  ").unwrap(), Address::new(0x1000));
+        assert_eq!(Address::from_str("deadbeef").unwrap(), Address::new(0xdeadbeef));
+        assert_eq!(Address::from_str("DEADBEEF").unwrap(), Address::new(0xDEADBEEF));
+        assert!(Address::from_str("invalid").is_err());
+        assert!(Address::from_str("0xGGGG").is_err());
+        assert!(Address::from_str("").is_err());
+    }
+
+    #[test]
+    fn test_alignment_edge_cases() {
+        let addr = Address::new(0x1000);
+        
+        assert!(addr.is_aligned(1));
+        assert!(addr.is_aligned(0x10));
+        assert!(addr.is_aligned(0x100));
+        assert!(addr.is_aligned(0x1000));
+        assert!(!addr.is_aligned(3));
+        
+        assert_eq!(addr.align_down(0), addr);
+        assert_eq!(addr.align_up(0), addr);
+        
+        let unaligned = Address::new(0x1234);
+        assert_eq!(unaligned.align_down(0x100), Address::new(0x1200));
+        assert_eq!(unaligned.align_up(0x100), Address::new(0x1300));
+    }
+
+    #[test]
+    fn test_comparison_operators() {
+        let a1 = Address::new(0x1000);
+        let a2 = Address::new(0x2000);
+        let a3 = Address::new(0x1000);
+        
+        assert!(a1 < a2);
+        assert!(a2 > a1);
+        assert!(a1 <= a3);
+        assert!(a1 >= a3);
+        assert_eq!(a1, a3);
+        assert_ne!(a1, a2);
+    }
+
+    #[test]
+    fn test_hash_implementation() {
+        use std::collections::HashSet;
+        
+        let mut set = HashSet::new();
+        set.insert(Address::new(0x1000));
+        set.insert(Address::new(0x2000));
+        set.insert(Address::new(0x1000));
+        
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&Address::new(0x1000)));
+        assert!(set.contains(&Address::new(0x2000)));
+        assert!(!set.contains(&Address::new(0x3000)));
+    }
+
+    #[test]
+    fn test_clone_and_copy() {
+        let original = Address::new(0x1234);
+        let cloned = original.clone();
+        let copied = original;
+        
+        assert_eq!(original, cloned);
+        assert_eq!(original, copied);
+    }
+
+    #[test]
+    fn test_serialization() {
+        let addr = Address::new(0xDEADBEEF);
+        let serialized = serde_json::to_string(&addr).unwrap();
+        let deserialized: Address = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(addr, deserialized);
+    }
 }

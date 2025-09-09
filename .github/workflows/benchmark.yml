@@ -40,23 +40,10 @@ jobs:
       
       - name: Run benchmarks
         run: |
-          cargo bench --no-fail-fast || true
-          echo '{"benchmarks":[]}' > benchmark-results.json
+          echo "Benchmarks are not yet implemented - placeholder for future benchmark suite"
+          echo '{"info": "Benchmarks will be added once core functionality is implemented"}' > benchmark-results.json
       
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Memory-MCP Benchmarks
-          tool: 'cargo'
-          output-file-path: benchmark-results.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
-          comment-on-alert: true
-          alert-threshold: '150%'
-          comment-always: true
-          benchmark-data-dir-path: benchmarks
-      
-      - name: Upload benchmark results
+      - name: Upload benchmark results placeholder
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
