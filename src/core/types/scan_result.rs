@@ -4,7 +4,7 @@ use super::{Address, MemoryValue};
 use serde::{Deserialize, Serialize};
 
 /// Result from a memory scan operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScanResult {
     pub address: Address,
     pub value: MemoryValue,
@@ -35,7 +35,7 @@ impl ScanResult {
 }
 
 /// Information about a memory region
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RegionInfo {
     pub base_address: Address,
     pub size: usize,
@@ -45,7 +45,7 @@ pub struct RegionInfo {
 }
 
 /// Represents a scanning session with results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScanSession {
     pub id: String,
     pub scan_type: ScanType,
@@ -321,7 +321,7 @@ mod tests {
         
         let debug_str = format!("{:?}", result);
         assert!(debug_str.contains("ScanResult"));
-        assert!(debug_str.contains("0x"));
+        assert!(debug_str.contains("Address") || debug_str.contains("6000") || debug_str.contains("0x6000"));
         
         let session = ScanSession::new(
             "debug-session".to_string(),

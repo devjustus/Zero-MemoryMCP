@@ -102,7 +102,7 @@ impl ModuleInfo {
 
     /// Gets the end address of the module
     pub fn end_address(&self) -> Address {
-        self.base_address.offset(self.size as isize)
+        Address::new(self.base_address.as_usize() + self.size)
     }
 
     /// Checks if an address is within this module

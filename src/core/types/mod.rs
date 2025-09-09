@@ -13,7 +13,7 @@ mod value;
 pub use address::Address;
 pub use error::{MemoryError, MemoryResult};
 pub use process_info::{ModuleInfo, ProcessArchitecture, ProcessInfo};
-pub use scan_result::{ScanResult, ScanSession, ScanType};
+pub use scan_result::{RegionInfo, ScanResult, ScanSession, ScanType};
 pub use value::{MemoryValue, ValueType};
 
 // Common type aliases
