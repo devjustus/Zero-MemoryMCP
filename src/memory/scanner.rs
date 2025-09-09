@@ -211,10 +211,10 @@ impl MemoryScanner {
 
             unsafe {
                 let handle = &*self.handle;
-                if handle.read_memory(addr.as_usize(), &mut new_value).is_ok() {
-                    if self.compare_values(old_value, &new_value, &comparison) {
-                        results.push(*addr);
-                    }
+                if handle.read_memory(addr.as_usize(), &mut new_value).is_ok()
+                    && self.compare_values(old_value, &new_value, &comparison)
+                {
+                    results.push(*addr);
                 }
             }
         }

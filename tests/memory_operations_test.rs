@@ -59,7 +59,7 @@ fn test_memory_reader_batch_operations() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
 
-    let values = vec![1u32, 2u32, 3u32];
+    let values = [1u32, 2u32, 3u32];
     let addresses: Vec<Address> = values
         .iter()
         .map(|v| Address::from(v as *const u32 as usize))
@@ -96,7 +96,7 @@ fn test_memory_reader_value_types() {
     // Test different value types
     let test_u8: u8 = 0xFF;
     let test_i32: i32 = -42;
-    let test_f32: f32 = 3.14159;
+    let test_f32: f32 = std::f32::consts::PI;
 
     let u8_addr = Address::from(&test_u8 as *const u8 as usize);
     let i32_addr = Address::from(&test_i32 as *const i32 as usize);
@@ -165,7 +165,7 @@ fn test_memory_writer_memory_value_types() {
         MemoryValue::U16(65535),
         MemoryValue::U32(4294967295),
         MemoryValue::I8(-128),
-        MemoryValue::F32(3.14159),
+        MemoryValue::F32(std::f32::consts::PI),
         MemoryValue::String("test".to_string()),
     ];
 
@@ -201,7 +201,7 @@ fn test_memory_scanner_with_current_process() {
     let scanner = MemoryScanner::new(&handle);
 
     // Create a known pattern in memory
-    let pattern_data = vec![0xDE, 0xAD, 0xBE, 0xEF];
+    let pattern_data = [0xDE, 0xAD, 0xBE, 0xEF];
     let pattern_addr = Address::from(pattern_data.as_ptr() as usize);
 
     // Scan for the pattern in a specific region
@@ -355,4 +355,225 @@ fn test_memory_scanner_compare_scan() {
     // Perform compare scan
     let results = scanner.compare_scan(&previous, ComparisonType::Equal);
     assert!(results.is_ok());
+}
+
+#[test]
+fn test_memory_scanner_comparison_types() {
+    let handle = get_test_handle();
+    let scanner = MemoryScanner::new(&handle);
+
+    use memory_mcp::memory::ComparisonType;
+    use std::collections::HashMap;
+
+    // Test different comparison types
+    let mut previous = HashMap::new();
+    let test_value = 100u32;
+    let addr = Address::from(&test_value as *const u32 as usize);
+    previous.insert(addr, vec![50, 0, 0, 0]); // Previous value was 50
+
+    // Test Greater comparison (100 > 50)
+    let results = scanner.compare_scan(&previous, ComparisonType::Greater);
+    assert!(results.is_ok());
+
+    // Test Less comparison (100 < 50 should find nothing)
+    let results = scanner.compare_scan(&previous, ComparisonType::Less);
+    assert!(results.is_ok());
+
+    // Test NotEqual comparison
+    let results = scanner.compare_scan(&previous, ComparisonType::NotEqual);
+    assert!(results.is_ok());
+
+    // Test GreaterOrEqual
+    let results = scanner.compare_scan(&previous, ComparisonType::GreaterOrEqual);
+    assert!(results.is_ok());
+
+    // Test LessOrEqual
+    let results = scanner.compare_scan(&previous, ComparisonType::LessOrEqual);
+    assert!(results.is_ok());
+}
+
+#[test]
+fn test_memory_writer_copy_and_swap() {
+    let handle = get_test_handle();
+    let writer = MemoryWriter::new(&handle);
+
+    // Create test buffers
+    let buffer1 = [1u8, 2, 3, 4];
+    let buffer2 = [5u8, 6, 7, 8];
+    let addr1 = Address::from(buffer1.as_ptr() as usize);
+    let addr2 = Address::from(buffer2.as_ptr() as usize);
+
+    // Test copy_memory (will fail with read-only handle but tests the path)
+    let result = writer.copy_memory(addr1, addr2, 4);
+    assert!(result.is_err());
+
+    // Test swap_memory
+    let result = writer.swap_memory(addr1, addr2, 4);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_memory_reader_cache_operations() {
+    let handle = get_test_handle();
+    let mut reader = MemoryReader::new(&handle);
+
+    // Test cache operations
+    assert_eq!(reader.cache_size(), 0);
+
+    // Try to read something to populate cache
+    let test_value = 42u32;
+    let addr = Address::from(&test_value as *const u32 as usize);
+
+    // Read bytes to trigger cache
+    let _ = reader.read_bytes(addr, 4);
+    // Cache should have something now
+
+    // Clear cache
+    reader.clear_cache();
+    assert_eq!(reader.cache_size(), 0);
+}
+
+#[test]
+fn test_memory_reader_wide_string() {
+    let handle = get_test_handle();
+    let reader = MemoryReader::new(&handle);
+
+    // Test with a wide string
+    let test_str = "Hello\0";
+    let wide: Vec<u16> = test_str.encode_utf16().collect();
+    let wide_addr = Address::from(wide.as_ptr() as usize);
+
+    let result = reader.read_wide_string(wide_addr, 100);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "Hello");
+}
+
+#[test]
+fn test_scan_pattern_variations() {
+    // Test different pattern types
+    let exact = ScanPattern::Exact(vec![0xDE, 0xAD]);
+    assert_eq!(exact.len(), 2);
+    assert!(!exact.is_empty());
+
+    let masked = ScanPattern::Masked(vec![Some(0xDE), None, Some(0xAD)]);
+    assert_eq!(masked.len(), 3);
+
+    let string = ScanPattern::String("test".to_string());
+    assert_eq!(string.len(), 5); // includes null terminator
+
+    let wide = ScanPattern::WideString("test".to_string());
+    assert_eq!(wide.len(), 10); // UTF-16 + null
+
+    // Test empty check
+    let empty = ScanPattern::Exact(vec![]);
+    assert!(empty.is_empty());
+}
+
+#[test]
+fn test_memory_writer_wide_string_operations() {
+    let handle = get_test_handle();
+    let writer = MemoryWriter::new(&handle);
+
+    // Test writing wide string (will fail but tests the code path)
+    let result = writer.write_wide_string(Address::new(0x1000), "Hello 世界");
+    assert!(result.is_err());
+
+    // Test writing regular string
+    let result = writer.write_string(Address::new(0x2000), "Test String");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_memory_operations_facade() {
+    let handle = get_test_handle();
+    let mut ops = MemoryOperations::new(handle);
+
+    // Test reader_mut access
+    ops.reader_mut().clear_cache();
+    assert_eq!(ops.reader_mut().cache_size(), 0);
+
+    // Test direct read/write through facade
+    let test_value = 42u32;
+    let addr = Address::from(&test_value as *const u32 as usize);
+
+    let read_result = ops.read::<u32>(addr);
+    assert!(read_result.is_ok());
+
+    let write_result = ops.write(addr, 100u32);
+    assert!(write_result.is_err()); // Should fail with read-only handle
+
+    // Test scan through facade
+    let pattern = ScanPattern::Exact(vec![42, 0, 0, 0]);
+    let options = ScanOptions {
+        start_address: Some(addr),
+        end_address: Some(Address::new(addr.as_usize() + 0x100)),
+        ..Default::default()
+    };
+    let scan_result = ops.scan(&pattern, options);
+    assert!(scan_result.is_ok());
+}
+
+#[test]
+fn test_scan_options_custom_settings() {
+    let options = ScanOptions {
+        start_address: Some(Address::new(0x1000)),
+        end_address: Some(Address::new(0x9000)),
+        executable_only: true,
+        writable_only: true,
+        parallel: false,
+        alignment: 8,
+        max_results: Some(50),
+    };
+
+    assert_eq!(options.start_address, Some(Address::new(0x1000)));
+    assert_eq!(options.end_address, Some(Address::new(0x9000)));
+    assert!(options.executable_only);
+    assert!(options.writable_only);
+    assert!(!options.parallel);
+    assert_eq!(options.alignment, 8);
+    assert_eq!(options.max_results, Some(50));
+}
+
+#[test]
+fn test_memory_value_all_types() {
+    let handle = get_test_handle();
+    let reader = MemoryReader::new(&handle);
+    let writer = MemoryWriter::new(&handle);
+
+    // Test all MemoryValue variants
+    let values = vec![
+        MemoryValue::U8(255),
+        MemoryValue::U16(65535),
+        MemoryValue::U32(4294967295),
+        MemoryValue::U64(18446744073709551615),
+        MemoryValue::I8(-128),
+        MemoryValue::I16(-32768),
+        MemoryValue::I32(-2147483648),
+        MemoryValue::I64(-9223372036854775808),
+        MemoryValue::F32(std::f32::consts::PI),
+        MemoryValue::F64(std::f64::consts::E),
+        MemoryValue::String("Test String".to_string()),
+        MemoryValue::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF]),
+    ];
+
+    for value in values {
+        // Test write_value
+        let result = writer.write_value(Address::new(0x1000), &value);
+        assert!(result.is_err()); // Expected with read-only handle
+
+        // Test read_value for supported types
+        use memory_mcp::core::types::ValueType;
+        match value {
+            MemoryValue::U8(_) => {
+                let _ = reader.read_value(Address::new(0x1000), ValueType::U8);
+            }
+            MemoryValue::U16(_) => {
+                let _ = reader.read_value(Address::new(0x1000), ValueType::U16);
+            }
+            MemoryValue::U32(_) => {
+                let _ = reader.read_value(Address::new(0x1000), ValueType::U32);
+            }
+            _ => {}
+        }
+    }
 }

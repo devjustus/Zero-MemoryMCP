@@ -298,8 +298,8 @@ mod tests {
             MemoryValue::I16(-32768),
             MemoryValue::I32(-2147483648),
             MemoryValue::I64(-9223372036854775808),
-            MemoryValue::F32(3.14159),
-            MemoryValue::F64(2.71828),
+            MemoryValue::F32(std::f32::consts::PI),
+            MemoryValue::F64(std::f64::consts::E),
             MemoryValue::String("Hello, World!".to_string()),
             MemoryValue::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF]),
         ];

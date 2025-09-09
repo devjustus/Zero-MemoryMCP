@@ -141,7 +141,7 @@ impl MemoryReader {
         // Find null terminator
         let len = buffer.iter().position(|&b| b == 0).unwrap_or(max_len);
 
-        String::from_utf8(buffer[..len].to_vec()).map_err(|e| MemoryError::Utf8Error(e))
+        String::from_utf8(buffer[..len].to_vec()).map_err(MemoryError::Utf8Error)
     }
 
     /// Read a wide string (UTF-16) from memory
@@ -269,9 +269,9 @@ mod tests {
         let handle = ProcessHandle::open_for_read(std::process::id()).unwrap_or_else(|_| {
             // If that fails, just test that creation works with any handle
             // The actual operations will fail but that's expected in tests
-            return ProcessHandle::open_for_read(4).unwrap_or_else(|_| {
+            ProcessHandle::open_for_read(4).unwrap_or_else(|_| {
                 panic!("Cannot create test handle");
-            });
+            })
         });
 
         let reader = MemoryReader::new(&handle);
