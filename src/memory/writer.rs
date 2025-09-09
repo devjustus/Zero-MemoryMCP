@@ -175,6 +175,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_memory_writer_creation() {
         let handle = create_test_handle();
         let _writer = MemoryWriter::new(&handle);
@@ -182,6 +183,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_bytes_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -191,6 +193,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_typed_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -200,6 +203,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_string_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -209,6 +213,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_wide_string_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -218,6 +223,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_batch() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -231,6 +237,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_memory_value() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -249,6 +256,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_fill_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -258,6 +266,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_copy_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -267,6 +276,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_swap_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -276,6 +286,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_verified() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -285,6 +296,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_all_memory_value_types() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
@@ -311,6 +323,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_string_with_null_terminator() {
         // Test that write_string adds null terminator
         let handle = create_test_handle();
@@ -322,6 +335,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_write_wide_string_encoding() {
         // Test that write_wide_string properly encodes UTF-16
         let handle = create_test_handle();

@@ -23,6 +23,7 @@ fn get_test_handle() -> ProcessHandle {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_creation() {
     let handle = get_test_handle();
     let ops = MemoryOperations::new(handle);
@@ -34,6 +35,7 @@ fn test_memory_operations_creation() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_with_current_process() {
     let handle = get_test_handle();
     let mut reader = MemoryReader::new(&handle);
@@ -64,6 +66,7 @@ fn test_memory_reader_with_current_process() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_batch_operations() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
@@ -84,6 +87,7 @@ fn test_memory_reader_batch_operations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_string_operations() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
@@ -98,6 +102,7 @@ fn test_memory_reader_string_operations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_value_types() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
@@ -165,6 +170,7 @@ fn test_memory_writer_with_current_process() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_memory_value_types() {
     let handle = get_test_handle();
     let writer = MemoryWriter::new(&handle);
@@ -206,6 +212,7 @@ fn test_memory_scanner_pattern_creation() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_scanner_with_current_process() {
     let handle = get_test_handle();
     let scanner = MemoryScanner::new(&handle);
@@ -236,6 +243,7 @@ fn test_memory_scanner_with_current_process() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_scanner_find_value() {
     let handle = get_test_handle();
     let scanner = MemoryScanner::new(&handle);
@@ -259,6 +267,7 @@ fn test_memory_scanner_find_value() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_integrated() {
     let handle = get_test_handle();
     let ops = MemoryOperations::new(handle);
@@ -325,6 +334,7 @@ fn test_scan_options_builder_pattern() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_batch_operations() {
     let handle = get_test_handle();
     let writer = MemoryWriter::new(&handle);
@@ -340,6 +350,7 @@ fn test_memory_writer_batch_operations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_fill_operation() {
     let handle = get_test_handle();
     let writer = MemoryWriter::new(&handle);
@@ -350,6 +361,7 @@ fn test_memory_writer_fill_operation() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_scanner_compare_scan() {
     let handle = get_test_handle();
     let scanner = MemoryScanner::new(&handle);
@@ -369,6 +381,7 @@ fn test_memory_scanner_compare_scan() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_scanner_comparison_types() {
     let handle = get_test_handle();
     let scanner = MemoryScanner::new(&handle);
@@ -404,6 +417,7 @@ fn test_memory_scanner_comparison_types() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_copy_and_swap() {
     let handle = get_test_handle();
     let writer = MemoryWriter::new(&handle);
@@ -424,6 +438,7 @@ fn test_memory_writer_copy_and_swap() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_cache_operations() {
     let handle = get_test_handle();
     let mut reader = MemoryReader::new(&handle);
@@ -445,6 +460,7 @@ fn test_memory_reader_cache_operations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_reader_wide_string() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
@@ -481,6 +497,7 @@ fn test_scan_pattern_variations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_wide_string_operations() {
     let handle = get_test_handle();
     let writer = MemoryWriter::new(&handle);
@@ -495,6 +512,7 @@ fn test_memory_writer_wide_string_operations() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_facade() {
     let handle = get_test_handle();
     let mut ops = MemoryOperations::new(handle);
@@ -546,6 +564,7 @@ fn test_scan_options_custom_settings() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_value_all_types() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);

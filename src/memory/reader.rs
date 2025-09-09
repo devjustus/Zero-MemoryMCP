@@ -264,6 +264,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_memory_reader_creation() {
         // Try to open current process for testing
         let handle = ProcessHandle::open_for_read(std::process::id()).unwrap_or_else(|_| {
@@ -279,6 +280,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_read_batch() {
         let handle = ProcessHandle::open_for_read(std::process::id())
             .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap());

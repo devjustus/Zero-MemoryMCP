@@ -113,6 +113,7 @@ mod tests {
     use crate::process::ProcessHandle;
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_memory_operations_creation() {
         // Test with current process handle
         let handle = ProcessHandle::open_for_read(std::process::id())

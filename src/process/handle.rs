@@ -163,6 +163,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_process_handle_new() {
+        let handle = ProcessHandle::new(std::ptr::null_mut(), 1234);
+        assert_eq!(handle.pid(), 1234);
+    }
+
+    #[test]
     fn test_process_access_constants() {
         assert_eq!(ProcessAccess::ALL_ACCESS.value(), 0x1FFFFF);
         assert_eq!(ProcessAccess::QUERY_INFORMATION.value(), 0x0400);
