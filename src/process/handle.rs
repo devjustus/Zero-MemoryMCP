@@ -47,6 +47,16 @@ pub struct ProcessHandle {
 }
 
 impl ProcessHandle {
+    /// Create a new ProcessHandle (for testing only)
+    #[cfg(test)]
+    pub fn new(handle: *mut winapi::ctypes::c_void, pid: u32) -> Self {
+        ProcessHandle {
+            handle: Handle::new(handle),
+            pid,
+            access: ProcessAccess::QUERY_INFORMATION,
+        }
+    }
+
     /// Open a process with specified access rights
     pub fn open(pid: u32, access: ProcessAccess) -> MemoryResult<Self> {
         let raw_handle = kernel32::open_process(pid, access.value())?;

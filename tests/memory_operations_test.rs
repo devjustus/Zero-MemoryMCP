@@ -9,8 +9,17 @@ use std::process;
 
 /// Get handle to current process for testing
 fn get_test_handle() -> ProcessHandle {
-    let pid = process::id();
-    ProcessHandle::open_for_read(pid).expect("Failed to open current process")
+    #[cfg(miri)]
+    {
+        // Return a mock handle for Miri testing
+        // This handle won't work for actual operations but allows tests to compile
+        ProcessHandle::new(std::ptr::null_mut(), 0)
+    }
+    #[cfg(not(miri))]
+    {
+        let pid = process::id();
+        ProcessHandle::open_for_read(pid).expect("Failed to open current process")
+    }
 }
 
 #[test]
@@ -130,6 +139,7 @@ fn test_memory_reader_value_types() {
 
 #[test]
 #[cfg(windows)]
+#[cfg_attr(miri, ignore = "Miri doesn't support Windows memory APIs")]
 fn test_memory_writer_with_current_process() {
     // Get handle with write access for current process
     let pid = process::id();
@@ -276,6 +286,7 @@ fn test_memory_operations_integrated() {
 
 #[test]
 #[cfg(windows)]
+#[cfg_attr(miri, ignore = "Miri doesn't support Windows memory APIs")]
 fn test_memory_region_validation() {
     use memory_mcp::memory::validate_region;
 
