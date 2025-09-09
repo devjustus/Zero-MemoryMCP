@@ -1,0 +1,89 @@
+name: Benchmarks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-bench-
+      
+      - name: Install cargo-criterion
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-criterion
+      
+      - name: Run benchmarks
+        run: cargo criterion --message-format=json | tee benchmark-results.json
+      
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Memory-MCP Benchmarks
+          tool: 'cargo'
+          output-file-path: benchmark-results.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: '150%'
+          comment-always: true
+          benchmark-data-dir-path: benchmarks
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.json
+
+  memory-benchmark:
+    name: Memory Usage Benchmarks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install valgrind alternative (drmemory)
+        run: |
+          choco install drmemory -y
+          echo "C:\Program Files (x86)\Dr. Memory\bin" >> $GITHUB_PATH
+      
+      - name: Build release binary
+        run: cargo build --release
+      
+      - name: Memory profile scanning operations
+        run: |
+          echo "Running memory profiling for scan operations..."
+          drmemory -light -no_follow_children -logdir ./memory-logs -- ./target/release/memory-mcp.exe --benchmark scan
+      
+      - name: Upload memory profile
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-profile
+          path: ./memory-logs/

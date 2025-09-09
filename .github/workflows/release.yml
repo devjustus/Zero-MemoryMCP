@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Create release builds
+  build-release:
+    name: Build Release (${{ matrix.target }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+        include:
+          - target: x86_64-pc-windows-msvc
+            archive: memory-mcp-x64.zip
+          - target: i686-pc-windows-msvc
+            archive: memory-mcp-x86.zip
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-release-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-${{ matrix.target }}-
+      
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+      
+      - name: Create release archive
+        run: |
+          mkdir release
+          cp target/${{ matrix.target }}/release/memory-mcp.exe release/
+          cp README.md release/
+          cp LICENSE release/ 2>nul || echo "No LICENSE file"
+          cd release
+          7z a ../${{ matrix.archive }} *
+      
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}
+
+  # Create MSI installer
+  create-installer:
+    name: Create MSI Installer
+    runs-on: windows-latest
+    needs: build-release
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: memory-mcp-x64.zip
+      
+      - name: Extract binary
+        run: |
+          7z x memory-mcp-x64.zip -oinstaller-files
+      
+      - name: Create simple installer script
+        run: |
+          @echo off > installer.bat
+          echo Installing Memory-MCP... >> installer.bat
+          echo. >> installer.bat
+          echo xcopy /Y memory-mcp.exe "%PROGRAMFILES%\Memory-MCP\" >> installer.bat
+          echo. >> installer.bat
+          echo Installation complete! >> installer.bat
+          echo Press any key to exit... >> installer.bat
+          echo pause > nul >> installer.bat
+      
+      - name: Create installer archive
+        run: |
+          mkdir installer
+          cp installer-files/memory-mcp.exe installer/
+          cp installer.bat installer/
+          cp README.md installer/
+          7z a memory-mcp-installer.zip installer/*
+      
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-mcp-installer
+          path: memory-mcp-installer.zip
+
+  # Publish GitHub release only
+  publish-github:
+    name: Publish GitHub Release
+    runs-on: windows-latest
+    needs: [build-release, create-installer]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+      
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "# Memory-MCP v${{ steps.version.outputs.version }}" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## 🎯 Windows Memory Manipulation MCP Server" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Features" >> CHANGELOG.md
+          echo "- High-performance memory scanning" >> CHANGELOG.md
+          echo "- Process attachment and management" >> CHANGELOG.md
+          echo "- Pattern matching (AOB)" >> CHANGELOG.md
+          echo "- Pointer chain resolution" >> CHANGELOG.md
+          echo "- Native MCP protocol support" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## Changes in this version" >> CHANGELOG.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo HEAD~10)..HEAD >> CHANGELOG.md
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Memory-MCP v${{ steps.version.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+          files: |
+            memory-mcp-x64.zip/memory-mcp-x64.zip
+            memory-mcp-x86.zip/memory-mcp-x86.zip
+            memory-mcp-installer/memory-mcp-installer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

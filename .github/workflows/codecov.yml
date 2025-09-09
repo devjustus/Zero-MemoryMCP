@@ -1,0 +1,37 @@
+# Codecov configuration file
+codecov:
+  require_ci_to_pass: true
+  
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+        paths:
+          - "src/"
+    patch:
+      default:
+        target: 80%
+        threshold: 2%
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: true
+      loop: true
+      method: true
+      macro: false
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "tests/**"
+  - "examples/**"
+  - "benches/**"
+  - "**/*.md"

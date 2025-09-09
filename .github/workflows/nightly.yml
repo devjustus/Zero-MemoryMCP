@@ -1,0 +1,86 @@
+name: Nightly Build
+
+on:
+  schedule:
+    # Run every day at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Nightly build with experimental features
+  nightly:
+    name: Nightly Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy, miri
+      
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-nightly-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-nightly-
+      
+      - name: Build with all features
+        run: cargo +nightly build --all-features --verbose
+      
+      - name: Test with all features
+        run: cargo +nightly test --all-features --verbose
+      
+      - name: Check unstable features
+        run: cargo +nightly check -Z unstable-options --all-features
+      
+      - name: Run Miri tests
+        run: |
+          cargo +nightly miri setup
+          cargo +nightly miri test
+        env:
+          MIRIFLAGS: "-Zmiri-disable-isolation"
+      
+      - name: Create nightly archive
+        run: |
+          cargo +nightly build --release --all-features
+          mkdir nightly-build
+          cp target/release/memory-mcp.exe nightly-build/
+          cp README.md nightly-build/
+          echo "Nightly build $(date -u +%Y%m%d)" > nightly-build/BUILD_INFO.txt
+          7z a memory-mcp-nightly.zip nightly-build/*
+      
+      - name: Upload nightly artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memory-mcp-nightly
+          path: memory-mcp-nightly.zip
+          retention-days: 7
+
+  # Experimental features testing
+  experimental:
+    name: Experimental Features
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust Nightly
+        uses: dtolnay/rust-toolchain@nightly
+      
+      - name: Test with unstable features
+        run: |
+          cargo +nightly test --features "experimental simd-nightly unsafe-optimizations"
+      
+      - name: Benchmark experimental features
+        run: |
+          cargo +nightly bench --features "experimental simd-nightly" -- --save-baseline nightly
