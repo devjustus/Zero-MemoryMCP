@@ -11,7 +11,7 @@ pub mod scanner;
 pub mod writer;
 
 pub use reader::{MemoryReader, ReadCache};
-pub use scanner::{MemoryScanner, ScanOptions, ScanPattern, ComparisonType};
+pub use scanner::{ComparisonType, MemoryScanner, ScanOptions, ScanPattern};
 pub use writer::MemoryWriter;
 
 use crate::core::types::{Address, MemoryError, MemoryResult, MemoryValue};
@@ -83,7 +83,7 @@ pub fn validate_region(handle: &ProcessHandle, address: Address, size: usize) ->
     // Query the memory region to check if it's valid
     unsafe {
         let mbi = kernel32::virtual_query_ex(handle.raw(), address.as_usize())?;
-        
+
         // Check if the region is committed
         const MEM_COMMIT: u32 = 0x1000;
         if mbi.State != MEM_COMMIT {

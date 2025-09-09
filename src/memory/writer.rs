@@ -23,7 +23,7 @@ impl MemoryWriter {
         unsafe {
             let handle = &*self.handle;
             let bytes_written = handle.write_memory(address.as_usize(), data)?;
-            
+
             if bytes_written != data.len() {
                 return Err(MemoryError::WriteFailed {
                     address: format!("0x{:X}", address.as_usize()),
@@ -34,7 +34,7 @@ impl MemoryWriter {
                     ),
                 });
             }
-            
+
             Ok(())
         }
     }
@@ -43,7 +43,7 @@ impl MemoryWriter {
     pub fn write<T: Copy>(&self, address: Address, value: T) -> MemoryResult<()> {
         let size = mem::size_of::<T>();
         let ptr = &value as *const T as *const u8;
-        
+
         unsafe {
             let data = std::slice::from_raw_parts(ptr, size);
             self.write_bytes(address, data)
@@ -60,10 +60,7 @@ impl MemoryWriter {
     /// Write a wide string (UTF-16) to memory (null-terminated)
     pub fn write_wide_string(&self, address: Address, value: &str) -> MemoryResult<()> {
         let wide: Vec<u16> = value.encode_utf16().chain(std::iter::once(0)).collect();
-        let bytes: Vec<u8> = wide
-            .iter()
-            .flat_map(|&w| w.to_le_bytes())
-            .collect();
+        let bytes: Vec<u8> = wide.iter().flat_map(|&w| w.to_le_bytes()).collect();
         self.write_bytes(address, &bytes)
     }
 
@@ -100,14 +97,19 @@ impl MemoryWriter {
     }
 
     /// Copy memory from one location to another within the same process
-    pub fn copy_memory(&self, source: Address, destination: Address, size: usize) -> MemoryResult<()> {
+    pub fn copy_memory(
+        &self,
+        source: Address,
+        destination: Address,
+        size: usize,
+    ) -> MemoryResult<()> {
         // Read from source
         let mut buffer = vec![0u8; size];
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(source.as_usize(), &mut buffer)?;
         }
-        
+
         // Write to destination
         self.write_bytes(destination, &buffer)
     }
@@ -117,36 +119,40 @@ impl MemoryWriter {
         // Read both regions
         let mut buffer1 = vec![0u8; size];
         let mut buffer2 = vec![0u8; size];
-        
+
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(addr1.as_usize(), &mut buffer1)?;
             handle.read_memory(addr2.as_usize(), &mut buffer2)?;
         }
-        
+
         // Write them swapped
         self.write_bytes(addr1, &buffer2)?;
         self.write_bytes(addr2, &buffer1)?;
-        
+
         Ok(())
     }
 
     /// Write with verification - reads back to confirm write succeeded
-    pub fn write_verified<T: Copy + PartialEq>(&self, address: Address, value: T) -> MemoryResult<()> {
+    pub fn write_verified<T: Copy + PartialEq>(
+        &self,
+        address: Address,
+        value: T,
+    ) -> MemoryResult<()> {
         // Write the value
         self.write(address, value)?;
-        
+
         // Read it back
         let size = mem::size_of::<T>();
         let mut buffer = vec![0u8; size];
-        
+
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(address.as_usize(), &mut buffer)?;
         }
-        
+
         let read_value = unsafe { *(buffer.as_ptr() as *const T) };
-        
+
         // Verify
         if read_value != value {
             return Err(MemoryError::WriteFailed {
@@ -154,7 +160,7 @@ impl MemoryWriter {
                 reason: "Verification failed: written value doesn't match".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }
@@ -179,7 +185,7 @@ mod tests {
     fn test_write_bytes_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.write_bytes(Address::new(0x1000), &[1, 2, 3, 4]);
         assert!(result.is_err());
     }
@@ -188,7 +194,7 @@ mod tests {
     fn test_write_typed_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.write(Address::new(0x1000), 42u32);
         assert!(result.is_err());
     }
@@ -197,7 +203,7 @@ mod tests {
     fn test_write_string_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.write_string(Address::new(0x1000), "test");
         assert!(result.is_err());
     }
@@ -206,7 +212,7 @@ mod tests {
     fn test_write_wide_string_with_null_handle() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.write_wide_string(Address::new(0x1000), "test");
         assert!(result.is_err());
     }
@@ -215,12 +221,9 @@ mod tests {
     fn test_write_batch() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
-        let writes = vec![
-            (Address::new(0x1000), 42u32),
-            (Address::new(0x2000), 84u32),
-        ];
-        
+
+        let writes = vec![(Address::new(0x1000), 42u32), (Address::new(0x2000), 84u32)];
+
         let results = writer.write_batch(&writes);
         assert_eq!(results.len(), 2);
         assert!(results[0].is_err());
@@ -231,15 +234,15 @@ mod tests {
     fn test_write_memory_value() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let value = MemoryValue::U32(42);
         let result = writer.write_value(Address::new(0x1000), &value);
         assert!(result.is_err());
-        
+
         let value = MemoryValue::String("test".to_string());
         let result = writer.write_value(Address::new(0x1000), &value);
         assert!(result.is_err());
-        
+
         let value = MemoryValue::Bytes(vec![1, 2, 3, 4]);
         let result = writer.write_value(Address::new(0x1000), &value);
         assert!(result.is_err());
@@ -249,7 +252,7 @@ mod tests {
     fn test_fill_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.fill(Address::new(0x1000), 0xCC, 100);
         assert!(result.is_err());
     }
@@ -258,7 +261,7 @@ mod tests {
     fn test_copy_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.copy_memory(Address::new(0x1000), Address::new(0x2000), 100);
         assert!(result.is_err());
     }
@@ -267,7 +270,7 @@ mod tests {
     fn test_swap_memory() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.swap_memory(Address::new(0x1000), Address::new(0x2000), 100);
         assert!(result.is_err());
     }
@@ -276,7 +279,7 @@ mod tests {
     fn test_write_verified() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let result = writer.write_verified(Address::new(0x1000), 42u32);
         assert!(result.is_err());
     }
@@ -285,7 +288,7 @@ mod tests {
     fn test_write_all_memory_value_types() {
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         let test_values = vec![
             MemoryValue::U8(255),
             MemoryValue::U16(65535),
@@ -300,7 +303,7 @@ mod tests {
             MemoryValue::String("Hello, World!".to_string()),
             MemoryValue::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF]),
         ];
-        
+
         for value in test_values {
             let result = writer.write_value(Address::new(0x1000), &value);
             assert!(result.is_err()); // Should fail with null handle
@@ -312,7 +315,7 @@ mod tests {
         // Test that write_string adds null terminator
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         // This will fail with null handle, but we're testing the logic
         let _ = writer.write_string(Address::new(0x1000), "test");
         // The function should add a null terminator internally
@@ -323,10 +326,10 @@ mod tests {
         // Test that write_wide_string properly encodes UTF-16
         let handle = create_test_handle();
         let writer = MemoryWriter::new(&handle);
-        
+
         // Test with ASCII
         let _ = writer.write_wide_string(Address::new(0x1000), "Hello");
-        
+
         // Test with Unicode
         let _ = writer.write_wide_string(Address::new(0x2000), "Hello 世界");
     }

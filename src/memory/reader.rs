@@ -123,7 +123,7 @@ impl MemoryReader {
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(address.as_usize(), &mut buffer)?;
-            
+
             // Safety: We're reading exactly size_of::<T>() bytes
             Ok(*(buffer.as_ptr() as *const T))
         }
@@ -132,7 +132,7 @@ impl MemoryReader {
     /// Read a null-terminated string from memory
     pub fn read_string(&self, address: Address, max_len: usize) -> MemoryResult<String> {
         let mut buffer = vec![0u8; max_len];
-        
+
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(address.as_usize(), &mut buffer)?;
@@ -140,9 +140,8 @@ impl MemoryReader {
 
         // Find null terminator
         let len = buffer.iter().position(|&b| b == 0).unwrap_or(max_len);
-        
-        String::from_utf8(buffer[..len].to_vec())
-            .map_err(|e| MemoryError::Utf8Error(e))
+
+        String::from_utf8(buffer[..len].to_vec()).map_err(|e| MemoryError::Utf8Error(e))
     }
 
     /// Read a wide string (UTF-16) from memory
@@ -154,7 +153,7 @@ impl MemoryReader {
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(address.as_usize(), &mut byte_buffer)?;
-            
+
             // Convert bytes to u16 array
             for i in 0..max_len {
                 buffer[i] = u16::from_le_bytes([byte_buffer[i * 2], byte_buffer[i * 2 + 1]]);
@@ -163,7 +162,7 @@ impl MemoryReader {
 
         // Find null terminator
         let len = buffer.iter().position(|&w| w == 0).unwrap_or(max_len);
-        
+
         String::from_utf16(&buffer[..len])
             .map_err(|_| MemoryError::InvalidValueType("Invalid UTF-16 string".to_string()))
     }
@@ -174,9 +173,13 @@ impl MemoryReader {
     }
 
     /// Read a MemoryValue from memory
-    pub fn read_value(&self, address: Address, value_type: crate::core::types::ValueType) -> MemoryResult<MemoryValue> {
+    pub fn read_value(
+        &self,
+        address: Address,
+        value_type: crate::core::types::ValueType,
+    ) -> MemoryResult<MemoryValue> {
         use crate::core::types::ValueType;
-        
+
         match value_type {
             ValueType::U8 => Ok(MemoryValue::U8(self.read::<u8>(address)?)),
             ValueType::U16 => Ok(MemoryValue::U16(self.read::<u16>(address)?)),
@@ -215,33 +218,33 @@ impl MemoryReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
     use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn test_cache_operations() {
         let mut cache = ReadCache::new(2, 100); // 2 entries, 100ms max age
-        
+
         // Test put and get
         cache.put(Address::new(0x1000), vec![1, 2, 3, 4]);
         assert_eq!(cache.get(Address::new(0x1000), 4), Some(vec![1, 2, 3, 4]));
         assert_eq!(cache.get(Address::new(0x1000), 2), Some(vec![1, 2]));
         assert_eq!(cache.get(Address::new(0x2000), 4), None);
-        
+
         // Test cache size
         assert_eq!(cache.size(), 1);
-        
+
         // Test eviction
         cache.put(Address::new(0x2000), vec![5, 6, 7, 8]);
         assert_eq!(cache.size(), 2);
-        
+
         cache.put(Address::new(0x3000), vec![9, 10, 11, 12]);
         assert_eq!(cache.size(), 2); // Oldest should be evicted
-        
+
         // Test expiration
         thread::sleep(Duration::from_millis(150));
         assert_eq!(cache.get(Address::new(0x2000), 4), None); // Should be expired
-        
+
         // Test clear
         cache.clear();
         assert_eq!(cache.size(), 0);
@@ -250,28 +253,27 @@ mod tests {
     #[test]
     fn test_cache_find_oldest() {
         let mut cache = ReadCache::new(3, 1000);
-        
+
         cache.put(Address::new(0x1000), vec![1]);
         thread::sleep(Duration::from_millis(10));
         cache.put(Address::new(0x2000), vec![2]);
         thread::sleep(Duration::from_millis(10));
         cache.put(Address::new(0x3000), vec![3]);
-        
+
         assert_eq!(cache.find_oldest_entry(), Some(Address::new(0x1000)));
     }
 
     #[test]
     fn test_memory_reader_creation() {
         // Try to open current process for testing
-        let handle = ProcessHandle::open_for_read(std::process::id())
-            .unwrap_or_else(|_| {
-                // If that fails, just test that creation works with any handle
-                // The actual operations will fail but that's expected in tests
-                return ProcessHandle::open_for_read(4).unwrap_or_else(|_| {
-                    panic!("Cannot create test handle");
-                });
+        let handle = ProcessHandle::open_for_read(std::process::id()).unwrap_or_else(|_| {
+            // If that fails, just test that creation works with any handle
+            // The actual operations will fail but that's expected in tests
+            return ProcessHandle::open_for_read(4).unwrap_or_else(|_| {
+                panic!("Cannot create test handle");
             });
-        
+        });
+
         let reader = MemoryReader::new(&handle);
         assert_eq!(reader.cache_size(), 0);
     }
@@ -280,11 +282,11 @@ mod tests {
     fn test_read_batch() {
         let handle = ProcessHandle::open_for_read(std::process::id())
             .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap());
-        
+
         let reader = MemoryReader::new(&handle);
         let addresses = vec![Address::new(0x1000), Address::new(0x2000)];
         let results: Vec<MemoryResult<u32>> = reader.read_batch(&addresses);
-        
+
         assert_eq!(results.len(), 2);
         // Both might fail depending on memory protection
         // Just check that we get results back
@@ -293,13 +295,16 @@ mod tests {
     #[test]
     fn test_cache_with_partial_data() {
         let mut cache = ReadCache::new(10, 1000);
-        
+
         // Put 10 bytes
         cache.put(Address::new(0x1000), vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        
+
         // Request 5 bytes - should succeed
-        assert_eq!(cache.get(Address::new(0x1000), 5), Some(vec![0, 1, 2, 3, 4]));
-        
+        assert_eq!(
+            cache.get(Address::new(0x1000), 5),
+            Some(vec![0, 1, 2, 3, 4])
+        );
+
         // Request 15 bytes - should fail (not enough cached data)
         assert_eq!(cache.get(Address::new(0x1000), 15), None);
     }
@@ -307,13 +312,13 @@ mod tests {
     #[test]
     fn test_cache_replacement() {
         let mut cache = ReadCache::new(1, 1000); // Only 1 entry allowed
-        
+
         cache.put(Address::new(0x1000), vec![1, 2, 3]);
         assert_eq!(cache.size(), 1);
-        
+
         cache.put(Address::new(0x2000), vec![4, 5, 6]);
         assert_eq!(cache.size(), 1);
-        
+
         // First entry should be gone
         assert_eq!(cache.get(Address::new(0x1000), 3), None);
         // Second entry should be present

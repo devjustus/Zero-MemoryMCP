@@ -23,7 +23,7 @@ impl ScanPattern {
     pub fn from_hex_string(pattern: &str) -> MemoryResult<Self> {
         let mut bytes = Vec::new();
         let parts: Vec<&str> = pattern.split_whitespace().collect();
-        
+
         for part in parts {
             if part == "??" || part == "?" {
                 bytes.push(None);
@@ -33,14 +33,14 @@ impl ScanPattern {
                 bytes.push(Some(byte));
             }
         }
-        
+
         if bytes.is_empty() {
             return Err(MemoryError::InvalidPattern("Empty pattern".to_string()));
         }
-        
+
         Ok(ScanPattern::Masked(bytes))
     }
-    
+
     /// Get the pattern length
     pub fn len(&self) -> usize {
         match self {
@@ -50,12 +50,12 @@ impl ScanPattern {
             ScanPattern::WideString(s) => (s.len() + 1) * 2, // UTF-16 + null
         }
     }
-    
+
     /// Check if pattern is empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    
+
     /// Convert to byte pattern for matching
     fn to_match_pattern(&self) -> (Vec<u8>, Vec<bool>) {
         match self {
@@ -66,7 +66,7 @@ impl ScanPattern {
             ScanPattern::Masked(pattern) => {
                 let mut bytes = Vec::new();
                 let mut mask = Vec::new();
-                
+
                 for byte_opt in pattern {
                     if let Some(byte) = byte_opt {
                         bytes.push(*byte);
@@ -76,7 +76,7 @@ impl ScanPattern {
                         mask.push(false);
                     }
                 }
-                
+
                 (bytes, mask)
             }
             ScanPattern::String(s) => {
@@ -140,17 +140,17 @@ impl MemoryScanner {
             handle: handle as *const ProcessHandle,
         }
     }
-    
+
     /// Scan memory for a pattern
     pub fn scan(&self, pattern: &ScanPattern, options: ScanOptions) -> MemoryResult<Vec<Address>> {
         let (pattern_bytes, mask) = pattern.to_match_pattern();
         let regions = self.enumerate_regions(&options)?;
-        
+
         // For now, always use sequential scanning to avoid thread safety issues
         // Parallel scanning would require Arc<ProcessHandle> or similar
         self.scan_sequential(&regions, &pattern_bytes, &mask, &options)
     }
-    
+
     /// Scan a specific memory region
     pub fn scan_region(
         &self,
@@ -161,19 +161,19 @@ impl MemoryScanner {
     ) -> MemoryResult<Vec<Address>> {
         let (pattern_bytes, mask) = pattern.to_match_pattern();
         let mut buffer = vec![0u8; size];
-        
+
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(start.as_usize(), &mut buffer)?;
         }
-        
+
         let mut results = Vec::new();
         let pattern_len = pattern_bytes.len();
-        
+
         for i in (0..buffer.len().saturating_sub(pattern_len - 1)).step_by(options.alignment) {
             if self.matches_pattern(&buffer[i..], &pattern_bytes, &mask) {
                 results.push(Address::new(start.as_usize() + i));
-                
+
                 if let Some(max) = options.max_results {
                     if results.len() >= max {
                         break;
@@ -181,19 +181,23 @@ impl MemoryScanner {
                 }
             }
         }
-        
+
         Ok(results)
     }
-    
+
     /// Find all occurrences of a value
-    pub fn find_value<T: Copy>(&self, value: T, options: ScanOptions) -> MemoryResult<Vec<Address>> {
+    pub fn find_value<T: Copy>(
+        &self,
+        value: T,
+        options: ScanOptions,
+    ) -> MemoryResult<Vec<Address>> {
         let size = std::mem::size_of::<T>();
         let ptr = &value as *const T as *const u8;
         let pattern_bytes = unsafe { std::slice::from_raw_parts(ptr, size).to_vec() };
-        
+
         self.scan(&ScanPattern::Exact(pattern_bytes), options)
     }
-    
+
     /// Compare scan - find changed values
     pub fn compare_scan(
         &self,
@@ -201,10 +205,10 @@ impl MemoryScanner {
         comparison: ComparisonType,
     ) -> MemoryResult<Vec<Address>> {
         let mut results = Vec::new();
-        
+
         for (addr, old_value) in previous {
             let mut new_value = vec![0u8; old_value.len()];
-            
+
             unsafe {
                 let handle = &*self.handle;
                 if handle.read_memory(addr.as_usize(), &mut new_value).is_ok() {
@@ -214,21 +218,21 @@ impl MemoryScanner {
                 }
             }
         }
-        
+
         Ok(results)
     }
-    
+
     fn enumerate_regions(&self, options: &ScanOptions) -> MemoryResult<Vec<(Address, usize)>> {
         let mut regions = Vec::new();
         let mut current = options.start_address.unwrap_or(Address::new(0x10000));
         let end = options.end_address.unwrap_or(Address::new(0x7FFFFFFFFFFF));
-        
+
         unsafe {
             let handle = &*self.handle;
-            
+
             while current < end {
                 match kernel32::virtual_query_ex(handle.raw(), current.as_usize()) {
-                Ok(mbi) => {
+                    Ok(mbi) => {
                         const MEM_COMMIT: u32 = 0x1000;
                         const PAGE_EXECUTE: u32 = 0x10;
                         const PAGE_EXECUTE_READ: u32 = 0x20;
@@ -236,31 +240,40 @@ impl MemoryScanner {
                         const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
                         const PAGE_READWRITE: u32 = 0x04;
                         const PAGE_WRITECOPY: u32 = 0x08;
-                        
+
                         if mbi.State == MEM_COMMIT {
-                            let is_executable = mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | 
-                                                              PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0;
-                            let is_writable = mbi.Protect & (PAGE_READWRITE | PAGE_WRITECOPY | 
-                                                            PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0;
-                            
-                            let include = (!options.executable_only || is_executable) &&
-                                        (!options.writable_only || is_writable);
-                            
+                            let is_executable = mbi.Protect
+                                & (PAGE_EXECUTE
+                                    | PAGE_EXECUTE_READ
+                                    | PAGE_EXECUTE_READWRITE
+                                    | PAGE_EXECUTE_WRITECOPY)
+                                != 0;
+                            let is_writable = mbi.Protect
+                                & (PAGE_READWRITE
+                                    | PAGE_WRITECOPY
+                                    | PAGE_EXECUTE_READWRITE
+                                    | PAGE_EXECUTE_WRITECOPY)
+                                != 0;
+
+                            let include = (!options.executable_only || is_executable)
+                                && (!options.writable_only || is_writable);
+
                             if include {
-                                regions.push((Address::new(mbi.BaseAddress as usize), mbi.RegionSize));
+                                regions
+                                    .push((Address::new(mbi.BaseAddress as usize), mbi.RegionSize));
                             }
                         }
-                        
+
                         current = Address::new(mbi.BaseAddress as usize + mbi.RegionSize);
-                }
-                Err(_) => break,
+                    }
+                    Err(_) => break,
                 }
             }
         }
-        
+
         Ok(regions)
     }
-    
+
     fn scan_sequential(
         &self,
         regions: &[(Address, usize)],
@@ -269,12 +282,12 @@ impl MemoryScanner {
         options: &ScanOptions,
     ) -> MemoryResult<Vec<Address>> {
         let mut all_results = Vec::new();
-        
+
         for (addr, size) in regions {
-            let results = self.scan_region(*addr, *size, 
-                &ScanPattern::Exact(pattern.to_vec()), options)?;
+            let results =
+                self.scan_region(*addr, *size, &ScanPattern::Exact(pattern.to_vec()), options)?;
             all_results.extend(results);
-            
+
             if let Some(max) = options.max_results {
                 if all_results.len() >= max {
                     all_results.truncate(max);
@@ -282,10 +295,10 @@ impl MemoryScanner {
                 }
             }
         }
-        
+
         Ok(all_results)
     }
-    
+
     // Parallel scanning disabled for now due to thread safety requirements
     // Would need Arc<ProcessHandle> or similar to make this work safely
     #[allow(dead_code)]
@@ -297,23 +310,25 @@ impl MemoryScanner {
         _options: &ScanOptions,
     ) -> MemoryResult<Vec<Address>> {
         // Not implemented - would require thread-safe handle
-        Err(MemoryError::UnsupportedOperation("Parallel scanning not yet implemented".to_string()))
+        Err(MemoryError::UnsupportedOperation(
+            "Parallel scanning not yet implemented".to_string(),
+        ))
     }
-    
+
     fn matches_pattern(&self, data: &[u8], pattern: &[u8], mask: &[bool]) -> bool {
         if data.len() < pattern.len() {
             return false;
         }
-        
+
         for i in 0..pattern.len() {
             if mask[i] && data[i] != pattern[i] {
                 return false;
             }
         }
-        
+
         true
     }
-    
+
     fn compare_values(&self, old: &[u8], new: &[u8], comparison: &ComparisonType) -> bool {
         match comparison {
             ComparisonType::Equal => old == new,
@@ -340,7 +355,7 @@ pub enum ComparisonType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_pattern_from_hex_string() {
         let pattern = ScanPattern::from_hex_string("48 8B ?? ?? 89").unwrap();
@@ -355,26 +370,26 @@ mod tests {
             }
             _ => panic!("Wrong pattern type"),
         }
-        
+
         assert!(ScanPattern::from_hex_string("").is_err());
         assert!(ScanPattern::from_hex_string("GG").is_err());
     }
-    
+
     #[test]
     fn test_pattern_length() {
         let exact = ScanPattern::Exact(vec![1, 2, 3]);
         assert_eq!(exact.len(), 3);
-        
+
         let masked = ScanPattern::Masked(vec![Some(1), None, Some(3)]);
         assert_eq!(masked.len(), 3);
-        
+
         let string = ScanPattern::String("test".to_string());
         assert_eq!(string.len(), 5); // "test" + null
-        
+
         let wide = ScanPattern::WideString("test".to_string());
         assert_eq!(wide.len(), 10); // "test" in UTF-16 + null = 5 * 2
     }
-    
+
     #[test]
     fn test_scan_options_default() {
         let opts = ScanOptions::default();
@@ -384,13 +399,13 @@ mod tests {
         assert!(!opts.executable_only);
         assert!(!opts.writable_only);
     }
-    
+
     #[test]
     fn test_comparison_types() {
         let scanner = MemoryScanner {
             handle: std::ptr::null(),
         };
-        
+
         assert!(scanner.compare_values(&[1, 2], &[1, 2], &ComparisonType::Equal));
         assert!(!scanner.compare_values(&[1, 2], &[1, 3], &ComparisonType::Equal));
         assert!(scanner.compare_values(&[1, 2], &[1, 3], &ComparisonType::NotEqual));
@@ -398,19 +413,19 @@ mod tests {
         assert!(scanner.compare_values(&[1, 3], &[1, 2], &ComparisonType::Less));
         assert!(scanner.compare_values(&[1, 2], &[1, 3], &ComparisonType::Greater));
     }
-    
+
     #[test]
     fn test_pattern_matching() {
         let scanner = MemoryScanner {
             handle: std::ptr::null(),
         };
-        
+
         let data = vec![0x48, 0x8B, 0xC1, 0xFF, 0x89];
         let pattern = vec![0x48, 0x8B, 0x00, 0x00, 0x89];
         let mask = vec![true, true, false, false, true];
-        
+
         assert!(scanner.matches_pattern(&data, &pattern, &mask));
-        
+
         let pattern2 = vec![0x48, 0x8C, 0x00, 0x00, 0x89];
         assert!(!scanner.matches_pattern(&data, &pattern2, &mask));
     }
