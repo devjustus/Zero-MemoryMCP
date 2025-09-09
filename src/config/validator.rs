@@ -217,7 +217,10 @@ mod tests {
         config.scanner.cache_size = 0;
         let result = validate_config(&config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Cache size must be at least"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Cache size must be at least"));
     }
 
     #[test]
@@ -226,7 +229,10 @@ mod tests {
         config.memory.max_read_size = 0;
         let result = validate_config(&config);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Maximum read size"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Maximum read size"));
 
         // Note: max_read_size > 100MB is just a warning, not an error
         config.memory.max_read_size = 104857601; // > 100MB
@@ -237,7 +243,7 @@ mod tests {
     #[test]
     fn test_more_log_levels() {
         let mut config = Config::default();
-        
+
         // Test all valid log levels
         for level in &["trace", "debug", "info", "warn", "error"] {
             config.logging.level = level.to_string();
@@ -253,19 +259,19 @@ mod tests {
     #[test]
     fn test_chunk_size_power_of_two() {
         let mut config = Config::default();
-        
+
         // Valid powers of 2
         for size in &[1024, 2048, 4096, 8192, 16384, 32768, 65536] {
             config.scanner.chunk_size = *size;
             assert!(validate_config(&config).is_ok());
         }
-        
+
         // Invalid: not power of 2
         config.scanner.chunk_size = 3000;
         let result = validate_config(&config);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("power of 2"));
-        
+
         // Invalid: zero
         config.scanner.chunk_size = 0;
         config.scanner.cache_size = 65536; // Reset cache_size
@@ -277,24 +283,24 @@ mod tests {
     #[test]
     fn test_boundary_values() {
         let mut config = Config::default();
-        
+
         // Port boundaries
         config.server.port = 65535; // max valid
         assert!(validate_config(&config).is_ok());
-        
+
         config.server.port = 0; // invalid
         assert!(validate_config(&config).is_err());
-        
+
         // Max connections boundaries
         config.server.port = 3000; // reset
         config.server.max_connections = 1001;
         assert!(validate_config(&config).is_err());
-        
+
         // Thread count boundaries
         config.server.max_connections = 100; // reset
         config.scanner.max_threads = 129;
         assert!(validate_config(&config).is_err());
-        
+
         config.scanner.max_threads = 0;
         assert!(validate_config(&config).is_err());
     }
@@ -312,7 +318,7 @@ mod tests {
         config.server.port = 0;
         config.scanner.max_threads = 500;
         config.logging.level = "INVALID".to_string();
-        
+
         // Should fail on first error (port)
         let result = validate_config(&config);
         assert!(result.is_err());
@@ -328,13 +334,13 @@ mod tests {
         let result = validate_config(&config);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("host"));
-        
+
         config = Config::default(); // Reset config
         config.logging.level = "".to_string();
         let result = validate_config(&config);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("log level"));
-        
+
         config.logging.level = "info".to_string();
         config.logging.file = "".to_string();
         // Empty log file is invalid

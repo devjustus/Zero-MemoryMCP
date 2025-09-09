@@ -354,10 +354,10 @@ mod tests {
     fn test_invalid_toml() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("invalid.toml");
-        
+
         // Write invalid TOML
         fs::write(&config_path, "this is not valid toml { }").unwrap();
-        
+
         let loader = ConfigLoader::new(&config_path);
         let result = loader.load();
         assert!(result.is_err());

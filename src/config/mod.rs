@@ -30,11 +30,11 @@ mod tests {
         let _config = default_config();
         let _loader = ConfigLoader::new("test.toml");
         let _validator = ConfigValidator;
-        
+
         // Test ConfigResult type alias
         let result: ConfigResult<String> = Ok("test".to_string());
         assert!(result.is_ok());
-        
+
         let error_result: ConfigResult<String> = Err(ConfigError::Invalid("test".to_string()));
         assert!(error_result.is_err());
     }
@@ -66,7 +66,7 @@ mod tests {
         fn returns_config_result() -> ConfigResult<Config> {
             Ok(Config::default())
         }
-        
+
         let result = returns_config_result();
         assert!(result.is_ok());
     }
