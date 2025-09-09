@@ -1,10 +1,10 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 mod core;
 
 use anyhow::Result;
 use tracing::{info, Level};
-use tracing_subscriber;
-
-use crate::core::{Address, MemoryValue, ProcessInfo};
 
 #[tokio::main]
 async fn main() -> Result<()> {

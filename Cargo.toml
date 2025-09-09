@@ -9,6 +9,10 @@ license = "MIT"
 keywords = ["memory", "windows", "mcp", "process", "scanning"]
 categories = ["development-tools", "api-bindings"]
 
+[lib]
+name = "memory_mcp"
+path = "src/lib.rs"
+
 [dependencies]
 # Windows API bindings
 windows = { version = "0.52", features = [

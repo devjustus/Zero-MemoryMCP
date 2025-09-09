@@ -1,6 +1,6 @@
 //! Memory address wrapper type with hex parsing and validation
 
-use super::error::{MemoryError, MemoryResult};
+use super::error::MemoryError;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -74,10 +74,10 @@ impl FromStr for Address {
         let s = s.trim();
 
         // Handle hex prefix variations
-        let value = if s.starts_with("0x") || s.starts_with("0X") {
-            usize::from_str_radix(&s[2..], 16)
-        } else if s.starts_with("$") {
-            usize::from_str_radix(&s[1..], 16)
+        let value = if let Some(stripped) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+            usize::from_str_radix(stripped, 16)
+        } else if let Some(stripped) = s.strip_prefix("$") {
+            usize::from_str_radix(stripped, 16)
         } else if s.chars().any(|c| c.is_ascii_alphabetic()) {
             // Assume hex if contains letters
             usize::from_str_radix(s, 16)

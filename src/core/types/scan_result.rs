@@ -2,7 +2,6 @@
 
 use super::{Address, MemoryValue};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Result from a memory scan operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,6 +138,3 @@ impl ScanType {
         )
     }
 }
-
-// Re-export ValueType for convenience
-pub use super::value::ValueType;

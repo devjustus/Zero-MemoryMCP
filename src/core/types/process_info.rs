@@ -1,6 +1,6 @@
 //! Process information types
 
-use super::{Address, ProcessId, ThreadId};
+use super::{Address, ProcessId};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -55,8 +55,8 @@ impl ProcessInfo {
 pub enum ProcessArchitecture {
     X86,
     X64,
-    ARM,
-    ARM64,
+    Arm,
+    Arm64,
     Unknown,
 }
 
@@ -64,15 +64,15 @@ impl ProcessArchitecture {
     /// Returns the pointer size for this architecture
     pub fn pointer_size(&self) -> usize {
         match self {
-            ProcessArchitecture::X86 | ProcessArchitecture::ARM => 4,
-            ProcessArchitecture::X64 | ProcessArchitecture::ARM64 => 8,
+            ProcessArchitecture::X86 | ProcessArchitecture::Arm => 4,
+            ProcessArchitecture::X64 | ProcessArchitecture::Arm64 => 8,
             ProcessArchitecture::Unknown => std::mem::size_of::<usize>(),
         }
     }
 
     /// Checks if this is a 64-bit architecture
     pub fn is_64bit(&self) -> bool {
-        matches!(self, ProcessArchitecture::X64 | ProcessArchitecture::ARM64)
+        matches!(self, ProcessArchitecture::X64 | ProcessArchitecture::Arm64)
     }
 }
 

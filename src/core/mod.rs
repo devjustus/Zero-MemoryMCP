@@ -7,7 +7,7 @@
 pub mod types;
 
 // Re-export commonly used types for convenience
-pub use types::{Address, MemoryError, MemoryResult, MemoryValue, ProcessInfo, ScanResult};
+pub use types::{Address, MemoryValue, ProcessInfo};
 
 // Version information
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

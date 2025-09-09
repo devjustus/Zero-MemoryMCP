@@ -55,7 +55,7 @@ impl MemoryValue {
     /// Creates a value from bytes based on the specified type
     pub fn from_bytes(bytes: &[u8], value_type: ValueType) -> Option<Self> {
         match value_type {
-            ValueType::I8 => bytes.get(0).map(|&b| MemoryValue::I8(b as i8)),
+            ValueType::I8 => bytes.first().map(|&b| MemoryValue::I8(b as i8)),
             ValueType::I16 => {
                 if bytes.len() >= 2 {
                     Some(MemoryValue::I16(i16::from_le_bytes([bytes[0], bytes[1]])))
@@ -82,7 +82,7 @@ impl MemoryValue {
                     None
                 }
             }
-            ValueType::U8 => bytes.get(0).map(|&b| MemoryValue::U8(b)),
+            ValueType::U8 => bytes.first().map(|&b| MemoryValue::U8(b)),
             ValueType::U16 => {
                 if bytes.len() >= 2 {
                     Some(MemoryValue::U16(u16::from_le_bytes([bytes[0], bytes[1]])))
@@ -212,7 +212,7 @@ mod tests {
     fn test_value_size() {
         assert_eq!(MemoryValue::I32(42).size(), 4);
         assert_eq!(MemoryValue::U64(100).size(), 8);
-        assert_eq!(MemoryValue::F32(3.14).size(), 4);
+        assert_eq!(MemoryValue::F32(3.25).size(), 4);
         assert_eq!(MemoryValue::Bytes(vec![1, 2, 3]).size(), 3);
     }
 

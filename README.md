@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/github/devjustus/Zero-MemoryMCP/graph/badge.svg?token=V0P64XTN39)](https://codecov.io/github/devjustus/Zero-MemoryMCP)
+
 # Memory-MCP 🧠
 
 A high-performance Model Context Protocol (MCP) server for advanced memory manipulation and process analysis, designed as a modern alternative to traditional memory editing tools.
