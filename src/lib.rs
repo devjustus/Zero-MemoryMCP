@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+pub mod config;
 pub mod core;
 
 // Re-export main types from core module
@@ -48,7 +49,7 @@ mod tests {
         let i32_val = MemoryValue::I32(-100);
         assert_eq!(i32_val.value_type(), ValueType::I32);
 
-        let f64_val = MemoryValue::F64(3.14159);
+        let f64_val = MemoryValue::F64(std::f64::consts::PI);
         assert_eq!(f64_val.value_type(), ValueType::F64);
 
         let string_val = MemoryValue::String("test".to_string());

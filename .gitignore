@@ -41,3 +41,6 @@ tarpaulin-report.html
 # Environment
 .env
 .env.local
+CLAUDE.md
+validate.sh
+validate.bat

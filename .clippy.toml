@@ -1,0 +1,7 @@
+# Clippy configuration for Memory-MCP
+
+# Allow common patterns that are intentional in this codebase
+avoid-breaking-exported-api = true
+
+# Set lint levels
+msrv = "1.70.0"

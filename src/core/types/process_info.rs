@@ -282,7 +282,7 @@ mod tests {
         assert!(debug_str.contains("app.exe"));
 
         let arch = ProcessArchitecture::Arm64;
-        let cloned = arch.clone();
+        let cloned = arch;
         assert_eq!(arch, cloned);
 
         let module = ModuleInfo::new("mod.dll".to_string(), Address::new(0x5000), 0x3000);

@@ -327,7 +327,7 @@ mod tests {
         let value = MemoryValue::U64(100);
         assert_eq!(value.value_type(), ValueType::U64);
 
-        let value = MemoryValue::F32(3.14);
+        let value = MemoryValue::F32(std::f32::consts::PI);
         assert_eq!(value.value_type(), ValueType::F32);
 
         let value = MemoryValue::String("test".to_string());
@@ -366,8 +366,14 @@ mod tests {
             format!("{}", MemoryValue::U64(18446744073709551615)),
             "18446744073709551615"
         );
-        assert_eq!(format!("{}", MemoryValue::F32(3.14159)), "3.14159");
-        assert_eq!(format!("{}", MemoryValue::F64(2.71828)), "2.71828");
+        // Using PI and E constants - actual values will vary slightly from hardcoded
+        let pi_str = format!("{}", std::f32::consts::PI);
+        assert_eq!(
+            format!("{}", MemoryValue::F32(std::f32::consts::PI)),
+            pi_str
+        );
+        let e_str = format!("{}", std::f64::consts::E);
+        assert_eq!(format!("{}", MemoryValue::F64(std::f64::consts::E)), e_str);
         assert_eq!(
             format!("{}", MemoryValue::String("hello".to_string())),
             "\"hello\""
