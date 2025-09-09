@@ -26,7 +26,7 @@ fn get_test_handle() -> ProcessHandle {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_creation() {
     let handle = get_test_handle();
-    let ops = MemoryOperations::new(handle);
+    let mut ops = MemoryOperations::new(handle);
 
     // Test accessor methods
     assert!(ops.reader().cache_size() == 0);
@@ -270,7 +270,7 @@ fn test_memory_scanner_find_value() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_operations_integrated() {
     let handle = get_test_handle();
-    let ops = MemoryOperations::new(handle);
+    let mut ops = MemoryOperations::new(handle);
 
     // Test integrated read operation
     let test_value: u64 = 0xDEADBEEFCAFEBABE;

@@ -6,15 +6,15 @@ use crate::windows::bindings::kernel32;
 use std::mem;
 
 /// Memory writer for type-safe write operations
-pub struct MemoryWriter {
-    handle: *const ProcessHandle,
+pub struct MemoryWriter<'a> {
+    handle: &'a ProcessHandle,
 }
 
-impl MemoryWriter {
+impl<'a> MemoryWriter<'a> {
     /// Create a new memory writer
-    pub fn new(handle: &ProcessHandle) -> Self {
+    pub fn new(handle: &'a ProcessHandle) -> Self {
         MemoryWriter {
-            handle: handle as *const ProcessHandle,
+            handle,
         }
     }
 
@@ -25,23 +25,20 @@ impl MemoryWriter {
             return Ok(());
         }
 
-        unsafe {
-            let handle = &*self.handle;
-            let bytes_written = handle.write_memory(address.as_usize(), data)?;
+        let bytes_written = self.handle.write_memory(address.as_usize(), data)?;
 
-            if bytes_written != data.len() {
-                return Err(MemoryError::WriteFailed {
-                    address: format!("0x{:X}", address.as_usize()),
-                    reason: format!(
-                        "Partial write: expected {} bytes, wrote {} bytes",
-                        data.len(),
-                        bytes_written
-                    ),
-                });
-            }
-
-            Ok(())
+        if bytes_written != data.len() {
+            return Err(MemoryError::WriteFailed {
+                address: format!("0x{:X}", address.as_usize()),
+                reason: format!(
+                    "Partial write: expected {} bytes, wrote {} bytes",
+                    data.len(),
+                    bytes_written
+                ),
+            });
         }
+
+        Ok(())
     }
 
     /// Write a typed value to memory
@@ -115,10 +112,7 @@ impl MemoryWriter {
 
         // Read from source
         let mut buffer = vec![0u8; size];
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(source.as_usize(), &mut buffer)?;
-        }
+        self.handle.read_memory(source.as_usize(), &mut buffer)?;
 
         // Write to destination
         self.write_bytes(destination, &buffer)
@@ -135,11 +129,8 @@ impl MemoryWriter {
         let mut buffer1 = vec![0u8; size];
         let mut buffer2 = vec![0u8; size];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(addr1.as_usize(), &mut buffer1)?;
-            handle.read_memory(addr2.as_usize(), &mut buffer2)?;
-        }
+        self.handle.read_memory(addr1.as_usize(), &mut buffer1)?;
+        self.handle.read_memory(addr2.as_usize(), &mut buffer2)?;
 
         // Write them swapped
         self.write_bytes(addr1, &buffer2)?;
@@ -161,10 +152,7 @@ impl MemoryWriter {
         let size = mem::size_of::<T>();
         let mut buffer = vec![0u8; size];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(address.as_usize(), &mut buffer)?;
-        }
+        self.handle.read_memory(address.as_usize(), &mut buffer)?;
 
         let read_value = unsafe { *(buffer.as_ptr() as *const T) };
 

@@ -146,15 +146,15 @@ impl Default for ScanOptions {
 }
 
 /// Memory scanner for pattern matching
-pub struct MemoryScanner {
-    handle: *const ProcessHandle,
+pub struct MemoryScanner<'a> {
+    handle: &'a ProcessHandle,
 }
 
-impl MemoryScanner {
+impl<'a> MemoryScanner<'a> {
     /// Create a new memory scanner
-    pub fn new(handle: &ProcessHandle) -> Self {
+    pub fn new(handle: &'a ProcessHandle) -> Self {
         MemoryScanner {
-            handle: handle as *const ProcessHandle,
+            handle,
         }
     }
 
@@ -179,10 +179,7 @@ impl MemoryScanner {
         let (pattern_bytes, mask) = pattern.to_match_pattern();
         let mut buffer = vec![0u8; size];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(start.as_usize(), &mut buffer)?;
-        }
+        self.handle.read_memory(start.as_usize(), &mut buffer)?;
 
         let mut results = Vec::new();
         let pattern_len = pattern_bytes.len();
@@ -233,13 +230,10 @@ impl MemoryScanner {
         for (addr, old_value) in previous {
             let mut new_value = vec![0u8; old_value.len()];
 
-            unsafe {
-                let handle = &*self.handle;
-                if handle.read_memory(addr.as_usize(), &mut new_value).is_ok()
-                    && self.compare_values(old_value, &new_value, &comparison)
-                {
-                    results.push(*addr);
-                }
+            if self.handle.read_memory(addr.as_usize(), &mut new_value).is_ok()
+                && self.compare_values(old_value, &new_value, &comparison)
+            {
+                results.push(*addr);
             }
         }
 
@@ -251,11 +245,8 @@ impl MemoryScanner {
         let mut current = options.start_address.unwrap_or(Address::new(0x10000));
         let end = options.end_address.unwrap_or(Address::new(0x7FFFFFFFFFFF));
 
-        unsafe {
-            let handle = &*self.handle;
-
-            while current < end {
-                match kernel32::virtual_query_ex(handle.raw(), current.as_usize()) {
+        while current < end {
+            match unsafe { kernel32::virtual_query_ex(self.handle.raw(), current.as_usize()) } {
                     Ok(mbi) => {
                         const MEM_COMMIT: u32 = 0x1000;
                         const PAGE_EXECUTE: u32 = 0x10;
@@ -293,7 +284,6 @@ impl MemoryScanner {
                     Err(_) => break,
                 }
             }
-        }
 
         Ok(regions)
     }
@@ -426,9 +416,9 @@ mod tests {
 
     #[test]
     fn test_comparison_types() {
-        let scanner = MemoryScanner {
-            handle: std::ptr::null(),
-        };
+        // Create a dummy process handle for testing
+        let handle = crate::process::ProcessHandle::new(std::ptr::null_mut(), 0);
+        let scanner = MemoryScanner::new(&handle);
 
         assert!(scanner.compare_values(&[1, 2], &[1, 2], &ComparisonType::Equal));
         assert!(!scanner.compare_values(&[1, 2], &[1, 3], &ComparisonType::Equal));
@@ -440,9 +430,9 @@ mod tests {
 
     #[test]
     fn test_pattern_matching() {
-        let scanner = MemoryScanner {
-            handle: std::ptr::null(),
-        };
+        // Create a dummy process handle for testing
+        let handle = crate::process::ProcessHandle::new(std::ptr::null_mut(), 0);
+        let scanner = MemoryScanner::new(&handle);
 
         let data = vec![0x48, 0x8B, 0xC1, 0xFF, 0x89];
         let pattern = vec![0x48, 0x8B, 0x00, 0x00, 0x89];

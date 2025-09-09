@@ -22,59 +22,52 @@ use std::collections::HashMap;
 /// Memory operation context that holds process handle and provides unified interface
 pub struct MemoryOperations {
     handle: ProcessHandle,
-    reader: MemoryReader,
-    writer: MemoryWriter,
-    scanner: MemoryScanner,
 }
 
 impl MemoryOperations {
     /// Create new memory operations context for a process
     pub fn new(handle: ProcessHandle) -> Self {
-        let reader = MemoryReader::new(&handle);
-        let writer = MemoryWriter::new(&handle);
-        let scanner = MemoryScanner::new(&handle);
-
         MemoryOperations {
             handle,
-            reader,
-            writer,
-            scanner,
         }
     }
 
     /// Get a reference to the memory reader
-    pub fn reader(&self) -> &MemoryReader {
-        &self.reader
+    pub fn reader(&self) -> MemoryReader<'_> {
+        MemoryReader::new(&self.handle)
     }
 
     /// Get a mutable reference to the memory reader
-    pub fn reader_mut(&mut self) -> &mut MemoryReader {
-        &mut self.reader
+    pub fn reader_mut(&mut self) -> MemoryReader<'_> {
+        MemoryReader::new(&self.handle)
     }
 
     /// Get a reference to the memory writer
-    pub fn writer(&self) -> &MemoryWriter {
-        &self.writer
+    pub fn writer(&self) -> MemoryWriter<'_> {
+        MemoryWriter::new(&self.handle)
     }
 
     /// Get a reference to the memory scanner
-    pub fn scanner(&self) -> &MemoryScanner {
-        &self.scanner
+    pub fn scanner(&self) -> MemoryScanner<'_> {
+        MemoryScanner::new(&self.handle)
     }
 
     /// Read a value from memory
-    pub fn read<T: Copy>(&self, address: Address) -> MemoryResult<T> {
-        self.reader.read(address)
+    pub fn read<T: Copy>(&mut self, address: Address) -> MemoryResult<T> {
+        let reader = MemoryReader::new(&self.handle);
+        reader.read(address)
     }
 
     /// Write a value to memory
     pub fn write<T: Copy>(&self, address: Address, value: T) -> MemoryResult<()> {
-        self.writer.write(address, value)
+        let writer = MemoryWriter::new(&self.handle);
+        writer.write(address, value)
     }
 
     /// Scan for a pattern in memory
     pub fn scan(&self, pattern: &ScanPattern, options: ScanOptions) -> MemoryResult<Vec<Address>> {
-        self.scanner.scan(pattern, options)
+        let scanner = MemoryScanner::new(&self.handle);
+        scanner.scan(pattern, options)
     }
 }
 
@@ -120,7 +113,8 @@ mod tests {
             .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap());
 
         let ops = MemoryOperations::new(handle);
-        assert!(ops.reader().cache_size() == 0);
+        let reader = ops.reader();
+        assert!(reader.cache_size() == 0);
     }
 
     #[test]

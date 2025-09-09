@@ -82,16 +82,16 @@ impl ReadCache {
 }
 
 /// Memory reader with type-safe operations
-pub struct MemoryReader {
-    handle: *const ProcessHandle,
+pub struct MemoryReader<'a> {
+    handle: &'a ProcessHandle,
     cache: ReadCache,
 }
 
-impl MemoryReader {
+impl<'a> MemoryReader<'a> {
     /// Create a new memory reader
-    pub fn new(handle: &ProcessHandle) -> Self {
+    pub fn new(handle: &'a ProcessHandle) -> Self {
         MemoryReader {
-            handle: handle as *const ProcessHandle,
+            handle,
             cache: ReadCache::new(100, 1000), // 100 entries, 1 second max age
         }
     }
@@ -105,10 +105,7 @@ impl MemoryReader {
 
         // Read from process
         let mut buffer = vec![0u8; size];
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(address.as_usize(), &mut buffer)?;
-        }
+        self.handle.read_memory(address.as_usize(), &mut buffer)?;
 
         // Store in cache
         self.cache.put(address, buffer.clone());
@@ -120,11 +117,11 @@ impl MemoryReader {
         let size = mem::size_of::<T>();
         let mut buffer = vec![0u8; size];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(address.as_usize(), &mut buffer)?;
+        self.handle.read_memory(address.as_usize(), &mut buffer)?;
 
-            // Safety: We're reading exactly size_of::<T>() bytes
+
+        // Safety: We're reading exactly size_of::<T>() bytes  
+        unsafe {
             Ok(*(buffer.as_ptr() as *const T))
         }
     }
@@ -133,10 +130,7 @@ impl MemoryReader {
     pub fn read_string(&self, address: Address, max_len: usize) -> MemoryResult<String> {
         let mut buffer = vec![0u8; max_len];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(address.as_usize(), &mut buffer)?;
-        }
+        self.handle.read_memory(address.as_usize(), &mut buffer)?;
 
         // Find null terminator
         let len = buffer.iter().position(|&b| b == 0).unwrap_or(max_len);
@@ -150,14 +144,11 @@ impl MemoryReader {
         let byte_size = max_len * 2;
         let mut byte_buffer = vec![0u8; byte_size];
 
-        unsafe {
-            let handle = &*self.handle;
-            handle.read_memory(address.as_usize(), &mut byte_buffer)?;
+        self.handle.read_memory(address.as_usize(), &mut byte_buffer)?;
 
-            // Convert bytes to u16 array
-            for i in 0..max_len {
-                buffer[i] = u16::from_le_bytes([byte_buffer[i * 2], byte_buffer[i * 2 + 1]]);
-            }
+        // Convert bytes to u16 array
+        for i in 0..max_len {
+            buffer[i] = u16::from_le_bytes([byte_buffer[i * 2], byte_buffer[i * 2 + 1]]);
         }
 
         // Find null terminator
@@ -195,10 +186,7 @@ impl MemoryReader {
             ValueType::Bytes => {
                 // For bytes, read a default size
                 let mut buffer = vec![0u8; 256];
-                unsafe {
-                    let handle = &*self.handle;
-                    handle.read_memory(address.as_usize(), &mut buffer)?;
-                }
+                self.handle.read_memory(address.as_usize(), &mut buffer)?;
                 Ok(MemoryValue::Bytes(buffer))
             }
         }
