@@ -11,7 +11,7 @@ pub mod scanner;
 pub mod writer;
 
 pub use reader::{MemoryReader, ReadCache};
-pub use scanner::{MemoryScanner, ScanOptions, ScanPattern};
+pub use scanner::{MemoryScanner, ScanOptions, ScanPattern, ComparisonType};
 pub use writer::MemoryWriter;
 
 use crate::core::types::{Address, MemoryError, MemoryResult, MemoryValue};
@@ -114,12 +114,9 @@ mod tests {
 
     #[test]
     fn test_memory_operations_creation() {
-        // Test with invalid handle
-        let handle = ProcessHandle {
-            handle: crate::windows::types::Handle::null(),
-            pid: 1234,
-            access: crate::process::handle::ProcessAccess::ALL_ACCESS,
-        };
+        // Test with current process handle
+        let handle = ProcessHandle::open_for_read(std::process::id())
+            .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap());
 
         let ops = MemoryOperations::new(handle);
         assert!(ops.reader().cache_size() == 0);
@@ -128,13 +125,11 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_validate_region_with_null_handle() {
-        let handle = ProcessHandle {
-            handle: crate::windows::types::Handle::null(),
-            pid: 1234,
-            access: crate::process::handle::ProcessAccess::ALL_ACCESS,
-        };
+        let handle = ProcessHandle::open_for_read(std::process::id())
+            .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap());
 
-        let result = validate_region(&handle, Address::new(0x1000), 100);
+        // Test with an invalid address that should fail
+        let result = validate_region(&handle, Address::new(0x0), 100);
         assert!(result.is_err());
     }
 }

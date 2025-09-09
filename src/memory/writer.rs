@@ -137,15 +137,15 @@ impl MemoryWriter {
         self.write(address, value)?;
         
         // Read it back
-        let mut read_value = unsafe { mem::zeroed::<T>() };
         let size = mem::size_of::<T>();
         let mut buffer = vec![0u8; size];
         
         unsafe {
             let handle = &*self.handle;
             handle.read_memory(address.as_usize(), &mut buffer)?;
-            read_value = *(buffer.as_ptr() as *const T);
         }
+        
+        let read_value = unsafe { *(buffer.as_ptr() as *const T) };
         
         // Verify
         if read_value != value {
@@ -162,15 +162,10 @@ impl MemoryWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::process::handle::ProcessAccess;
-    use crate::windows::types::Handle;
 
     fn create_test_handle() -> ProcessHandle {
-        ProcessHandle {
-            handle: Handle::null(),
-            pid: 1234,
-            access: ProcessAccess::ALL_ACCESS,
-        }
+        ProcessHandle::open_for_read(std::process::id())
+            .unwrap_or_else(|_| ProcessHandle::open_for_read(4).unwrap())
     }
 
     #[test]
