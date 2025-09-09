@@ -56,7 +56,6 @@ jobs:
         rust: [stable, beta]
         target: 
           - x86_64-pc-windows-msvc
-          - i686-pc-windows-msvc
     steps:
       - uses: actions/checkout@v4
       
