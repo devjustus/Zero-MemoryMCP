@@ -25,10 +25,10 @@ impl ScanPattern {
         if pattern.trim().is_empty() {
             return Err(MemoryError::InvalidPattern("Empty pattern".to_string()));
         }
-        
+
         let mut bytes = Vec::new();
         let parts: Vec<&str> = pattern.split_whitespace().collect();
-        
+
         // Double-check after splitting
         if parts.is_empty() {
             return Err(MemoryError::InvalidPattern("Empty pattern".to_string()));
@@ -40,9 +40,10 @@ impl ScanPattern {
             } else {
                 // Hex bytes must be exactly 2 characters
                 if part.len() != 2 {
-                    return Err(MemoryError::InvalidPattern(
-                        format!("Invalid hex byte '{}': must be 2 digits", part)
-                    ));
+                    return Err(MemoryError::InvalidPattern(format!(
+                        "Invalid hex byte '{}': must be 2 digits",
+                        part
+                    )));
                 }
                 let byte = u8::from_str_radix(part, 16)
                     .map_err(|_| MemoryError::InvalidPattern(format!("Invalid hex: {}", part)))?;
@@ -185,13 +186,15 @@ impl MemoryScanner {
 
         let mut results = Vec::new();
         let pattern_len = pattern_bytes.len();
-        
+
         // Handle empty pattern
         if pattern_len == 0 {
             return Ok(results);
         }
 
-        for i in (0..buffer.len().saturating_sub(pattern_len.saturating_sub(1))).step_by(options.alignment) {
+        for i in (0..buffer.len().saturating_sub(pattern_len.saturating_sub(1)))
+            .step_by(options.alignment)
+        {
             if self.matches_pattern(&buffer[i..], &pattern_bytes, &mask) {
                 results.push(Address::new(start.as_usize() + i));
 

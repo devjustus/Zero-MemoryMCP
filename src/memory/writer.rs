@@ -24,7 +24,7 @@ impl MemoryWriter {
         if data.is_empty() {
             return Ok(());
         }
-        
+
         unsafe {
             let handle = &*self.handle;
             let bytes_written = handle.write_memory(address.as_usize(), data)?;
@@ -112,7 +112,7 @@ impl MemoryWriter {
         if size == 0 {
             return Ok(());
         }
-        
+
         // Read from source
         let mut buffer = vec![0u8; size];
         unsafe {
@@ -130,7 +130,7 @@ impl MemoryWriter {
         if size == 0 {
             return Ok(());
         }
-        
+
         // Read both regions
         let mut buffer1 = vec![0u8; size];
         let mut buffer2 = vec![0u8; size];
