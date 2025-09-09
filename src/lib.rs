@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod core;
+pub mod windows;
 
 // Re-export main types from core module
 pub use core::types::{
@@ -24,7 +25,7 @@ mod tests {
         // Test that core module is accessible
         let _version = core::VERSION;
         let _authors = core::AUTHORS;
-        assert!(!core::VERSION.is_empty());
+        assert_eq!(core::VERSION, env!("CARGO_PKG_VERSION"));
     }
 
     #[test]
@@ -103,7 +104,9 @@ mod tests {
         // Test that MemoryResult is properly re-exported
         let result: MemoryResult<u32> = Ok(42);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 42);
+        if let Ok(value) = result {
+            assert_eq!(value, 42);
+        }
 
         let error_result: MemoryResult<u32> = Err(MemoryError::Unknown("test".to_string()));
         assert!(error_result.is_err());
@@ -163,9 +166,6 @@ mod tests {
     #[test]
     fn test_core_constants() {
         // Test that core constants are accessible
-        assert!(!VERSION.is_empty());
-        assert!(!AUTHORS.is_empty());
-
         // VERSION should match the package version
         assert_eq!(VERSION, env!("CARGO_PKG_VERSION"));
         assert_eq!(AUTHORS, env!("CARGO_PKG_AUTHORS"));

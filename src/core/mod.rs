@@ -26,8 +26,7 @@ mod tests {
 
     #[test]
     fn test_version_constant() {
-        // Test that VERSION constant is accessible and not empty
-        assert!(!VERSION.is_empty());
+        // Test that VERSION constant is accessible
         assert_eq!(VERSION, env!("CARGO_PKG_VERSION"));
     }
 
@@ -151,13 +150,13 @@ mod tests {
         // Verify we're on Windows at runtime
         #[cfg(target_os = "windows")]
         {
-            assert!(true, "Running on Windows platform");
+            // Running on Windows platform - compile-time check
         }
 
         // Verify we're on 64-bit at runtime
         #[cfg(target_pointer_width = "64")]
         {
-            assert!(true, "Running on 64-bit architecture");
+            // Running on 64-bit architecture - compile-time check
         }
     }
 
@@ -165,9 +164,6 @@ mod tests {
     fn test_module_documentation() {
         // This test verifies the module has proper documentation
         // The module docstring describes it as containing fundamental types and traits
-        assert!(
-            !VERSION.is_empty(),
-            "Module should have version information"
-        );
+        // VERSION is defined at compile time, so it's always non-empty
     }
 }

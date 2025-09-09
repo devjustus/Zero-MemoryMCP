@@ -205,7 +205,7 @@ fn test_cross_module_serialization() {
 fn test_memory_operations_workflow() {
     let base_addr = Address::new(0x400000);
 
-    let offsets = vec![0x100, 0x200, 0x300];
+    let offsets = [0x100, 0x200, 0x300];
     let addresses: Vec<Address> = offsets
         .iter()
         .map(|&offset| base_addr.offset(offset))

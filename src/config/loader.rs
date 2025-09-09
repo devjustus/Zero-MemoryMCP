@@ -454,8 +454,9 @@ mod tests {
     fn test_from_result() {
         let config = Config::default();
         let result: Result<Config, ConfigError> = Ok(config.clone());
-        let converted: Result<Config, ConfigError> = result.into();
-        assert!(converted.is_ok());
-        assert_eq!(converted.unwrap().server.host, config.server.host);
+        assert!(result.is_ok());
+        if let Ok(result_config) = result {
+            assert_eq!(result_config.server.host, config.server.host);
+        }
     }
 }

@@ -113,7 +113,6 @@ mod tests {
         // This test verifies that init_logging can be called
         // Note: In tests, we can't actually initialize the subscriber multiple times
         // but we can verify the function exists and is callable
-        assert!(true, "Logging initialization function exists");
     }
 
     #[tokio::test]
