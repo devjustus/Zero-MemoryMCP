@@ -1,0 +1,55 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: Cargo Format
+        entry: cargo fmt --all --
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-clippy
+        name: Cargo Clippy
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: cargo-test
+        name: Cargo Test
+        entry: cargo test --all
+        language: system
+        files: '\.rs$'
+        pass_filenames: false
+
+      - id: no-println
+        name: No println! in source
+        entry: '(?<!// )println!'
+        language: pygrep
+        files: '^src/.*\.rs$'
+
+      - id: no-unwrap
+        name: No unwrap() in source
+        entry: '\.unwrap\(\)'
+        language: pygrep
+        files: '^src/.*\.rs$'
+        exclude: '^src/tests/|^tests/'
+
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        entry: trailing-whitespace-fixer
+        language: system
+
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        entry: end-of-file-fixer
+        language: system
+
+      - id: check-yaml
+        name: Check YAML
+        entry: check-yaml
+        language: system
+        files: '\.ya?ml$'
