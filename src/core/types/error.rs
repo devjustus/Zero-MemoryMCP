@@ -174,10 +174,7 @@ mod tests {
                 MemoryError::ModuleNotFound("kernel32.dll".to_string()),
                 "Module not found: kernel32.dll",
             ),
-            (
-                MemoryError::PatternNotFound,
-                "Pattern not found in memory",
-            ),
+            (MemoryError::PatternNotFound, "Pattern not found in memory"),
             (
                 MemoryError::InvalidPattern("?? ?? XX".to_string()),
                 "Invalid pattern format: ?? ?? XX",

@@ -263,7 +263,11 @@ mod tests {
             MemoryValue::U32(0x12345678)
         );
         assert_eq!(
-            MemoryValue::from_bytes(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F], ValueType::F64).unwrap(),
+            MemoryValue::from_bytes(
+                &[0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F],
+                ValueType::F64
+            )
+            .unwrap(),
             MemoryValue::F64(1.0)
         );
         assert_eq!(
@@ -271,11 +275,19 @@ mod tests {
             MemoryValue::F32(1.0)
         );
         assert_eq!(
-            MemoryValue::from_bytes(&[0xEF, 0xBE, 0xAD, 0xDE, 0x00, 0x00, 0x00, 0x00], ValueType::I64).unwrap(),
+            MemoryValue::from_bytes(
+                &[0xEF, 0xBE, 0xAD, 0xDE, 0x00, 0x00, 0x00, 0x00],
+                ValueType::I64
+            )
+            .unwrap(),
             MemoryValue::I64(0xDEADBEEF)
         );
         assert_eq!(
-            MemoryValue::from_bytes(&[0xEF, 0xBE, 0xAD, 0xDE, 0x00, 0x00, 0x00, 0x00], ValueType::U64).unwrap(),
+            MemoryValue::from_bytes(
+                &[0xEF, 0xBE, 0xAD, 0xDE, 0x00, 0x00, 0x00, 0x00],
+                ValueType::U64
+            )
+            .unwrap(),
             MemoryValue::U64(0xDEADBEEF)
         );
         assert_eq!(
@@ -311,16 +323,16 @@ mod tests {
     fn test_value_type_enum() {
         let value = MemoryValue::I32(42);
         assert_eq!(value.value_type(), ValueType::I32);
-        
+
         let value = MemoryValue::U64(100);
         assert_eq!(value.value_type(), ValueType::U64);
-        
+
         let value = MemoryValue::F32(3.14);
         assert_eq!(value.value_type(), ValueType::F32);
-        
+
         let value = MemoryValue::String("test".to_string());
         assert_eq!(value.value_type(), ValueType::String);
-        
+
         let value = MemoryValue::Bytes(vec![1, 2, 3]);
         assert_eq!(value.value_type(), ValueType::Bytes);
     }
@@ -350,11 +362,20 @@ mod tests {
         assert_eq!(format!("{}", MemoryValue::U8(255)), "255");
         assert_eq!(format!("{}", MemoryValue::U16(65535)), "65535");
         assert_eq!(format!("{}", MemoryValue::U32(4294967295)), "4294967295");
-        assert_eq!(format!("{}", MemoryValue::U64(18446744073709551615)), "18446744073709551615");
+        assert_eq!(
+            format!("{}", MemoryValue::U64(18446744073709551615)),
+            "18446744073709551615"
+        );
         assert_eq!(format!("{}", MemoryValue::F32(3.14159)), "3.14159");
         assert_eq!(format!("{}", MemoryValue::F64(2.71828)), "2.71828");
-        assert_eq!(format!("{}", MemoryValue::String("hello".to_string())), "\"hello\"");
-        assert_eq!(format!("{}", MemoryValue::Bytes(vec![1, 2, 3])), "[1, 2, 3]");
+        assert_eq!(
+            format!("{}", MemoryValue::String("hello".to_string())),
+            "\"hello\""
+        );
+        assert_eq!(
+            format!("{}", MemoryValue::Bytes(vec![1, 2, 3])),
+            "[1, 2, 3]"
+        );
     }
 
     #[test]
@@ -373,7 +394,7 @@ mod tests {
             MemoryValue::String("test string".to_string()),
             MemoryValue::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF]),
         ];
-        
+
         for value in values {
             let json = serde_json::to_string(&value).unwrap();
             let deserialized: MemoryValue = serde_json::from_str(&json).unwrap();
@@ -397,7 +418,7 @@ mod tests {
             ValueType::Bytes,
             ValueType::String,
         ];
-        
+
         for value_type in types {
             let json = serde_json::to_string(&value_type).unwrap();
             let deserialized: ValueType = serde_json::from_str(&json).unwrap();
@@ -410,15 +431,15 @@ mod tests {
         let value = MemoryValue::U32(42);
         let cloned = value.clone();
         assert_eq!(value, cloned);
-        
+
         let debug_str = format!("{:?}", value);
         assert!(debug_str.contains("U32"));
         assert!(debug_str.contains("42"));
-        
+
         let value_type = ValueType::F64;
         let cloned = value_type.clone();
         assert_eq!(value_type, cloned);
-        
+
         let debug_str = format!("{:?}", value_type);
         assert!(debug_str.contains("F64"));
     }
@@ -430,16 +451,16 @@ mod tests {
             MemoryValue::from_bytes(&zero_bytes, ValueType::Bytes).unwrap(),
             MemoryValue::Bytes(vec![])
         );
-        
+
         let empty_string = vec![];
         assert_eq!(
             MemoryValue::from_bytes(&empty_string, ValueType::String).unwrap(),
             MemoryValue::String("".to_string())
         );
-        
+
         let max_i8 = MemoryValue::I8(127);
         assert_eq!(max_i8.to_bytes(), vec![127]);
-        
+
         let min_i8 = MemoryValue::I8(-128);
         assert_eq!(min_i8.to_bytes(), vec![128]);
     }

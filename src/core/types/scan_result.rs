@@ -177,7 +177,7 @@ mod tests {
             region_type: 0x20000,
         };
         result.region_info = Some(region.clone());
-        
+
         assert!(result.region_info.is_some());
         let info = result.region_info.unwrap();
         assert_eq!(info.base_address, Address::new(0x3000));
@@ -189,12 +189,8 @@ mod tests {
 
     #[test]
     fn test_scan_session_creation() {
-        let session = ScanSession::new(
-            "test-session".to_string(),
-            ScanType::Exact,
-            ValueType::U32,
-        );
-        
+        let session = ScanSession::new("test-session".to_string(), ScanType::Exact, ValueType::U32);
+
         assert_eq!(session.id, "test-session");
         assert_eq!(session.scan_type, ScanType::Exact);
         assert_eq!(session.value_type, ValueType::U32);
@@ -206,23 +202,20 @@ mod tests {
 
     #[test]
     fn test_scan_session_add_results() {
-        let mut session = ScanSession::new(
-            "session-2".to_string(),
-            ScanType::Unknown,
-            ValueType::I64,
-        );
-        
+        let mut session =
+            ScanSession::new("session-2".to_string(), ScanType::Unknown, ValueType::I64);
+
         let results = vec![
             ScanResult::new(Address::new(0x1000), MemoryValue::I64(100)),
             ScanResult::new(Address::new(0x2000), MemoryValue::I64(200)),
             ScanResult::new(Address::new(0x3000), MemoryValue::I64(300)),
         ];
-        
+
         let initial_time = session.last_scan_at;
         std::thread::sleep(std::time::Duration::from_millis(10));
-        
+
         session.add_results(results);
-        
+
         assert_eq!(session.results.len(), 3);
         assert_eq!(session.scan_count, 1);
         assert!(session.last_scan_at >= initial_time);
@@ -235,17 +228,17 @@ mod tests {
             ScanType::Between,
             ValueType::U32,
         );
-        
+
         let results = vec![
             ScanResult::new(Address::new(0x1000), MemoryValue::U32(10)),
             ScanResult::new(Address::new(0x2000), MemoryValue::U32(50)),
             ScanResult::new(Address::new(0x3000), MemoryValue::U32(100)),
             ScanResult::new(Address::new(0x4000), MemoryValue::U32(25)),
         ];
-        
+
         session.add_results(results);
         assert_eq!(session.results.len(), 4);
-        
+
         session.filter_results(|result| {
             if let MemoryValue::U32(val) = result.value {
                 val >= 50
@@ -253,7 +246,7 @@ mod tests {
                 false
             }
         });
-        
+
         assert_eq!(session.results.len(), 2);
     }
 
@@ -265,7 +258,7 @@ mod tests {
         assert!(ScanType::DecreasedBy.requires_previous());
         assert!(ScanType::Changed.requires_previous());
         assert!(ScanType::Unchanged.requires_previous());
-        
+
         assert!(!ScanType::Exact.requires_previous());
         assert!(!ScanType::Unknown.requires_previous());
         assert!(!ScanType::Between.requires_previous());
@@ -281,7 +274,7 @@ mod tests {
         assert!(ScanType::Between.requires_value());
         assert!(ScanType::BiggerThan.requires_value());
         assert!(ScanType::SmallerThan.requires_value());
-        
+
         assert!(!ScanType::Unknown.requires_value());
         assert!(!ScanType::Increased.requires_value());
         assert!(!ScanType::Decreased.requires_value());
@@ -295,17 +288,13 @@ mod tests {
         let json = serde_json::to_string(&result).unwrap();
         let deserialized: ScanResult = serde_json::from_str(&json).unwrap();
         assert_eq!(result.address, deserialized.address);
-        
-        let session = ScanSession::new(
-            "json-session".to_string(),
-            ScanType::Exact,
-            ValueType::U16,
-        );
+
+        let session = ScanSession::new("json-session".to_string(), ScanType::Exact, ValueType::U16);
         let json = serde_json::to_string(&session).unwrap();
         let deserialized: ScanSession = serde_json::from_str(&json).unwrap();
         assert_eq!(session.id, deserialized.id);
         assert_eq!(session.scan_type, deserialized.scan_type);
-        
+
         let scan_type = ScanType::Between;
         let json = serde_json::to_string(&scan_type).unwrap();
         assert_eq!(json, "\"between\"");
@@ -318,11 +307,15 @@ mod tests {
         let result = ScanResult::new(Address::new(0x6000), MemoryValue::F64(2.718));
         let cloned = result.clone();
         assert_eq!(result.address, cloned.address);
-        
+
         let debug_str = format!("{:?}", result);
         assert!(debug_str.contains("ScanResult"));
-        assert!(debug_str.contains("Address") || debug_str.contains("6000") || debug_str.contains("0x6000"));
-        
+        assert!(
+            debug_str.contains("Address")
+                || debug_str.contains("6000")
+                || debug_str.contains("0x6000")
+        );
+
         let session = ScanSession::new(
             "debug-session".to_string(),
             ScanType::Unknown,
@@ -330,11 +323,11 @@ mod tests {
         );
         let cloned = session.clone();
         assert_eq!(session.id, cloned.id);
-        
+
         let scan_type = ScanType::Increased;
         let cloned = scan_type.clone();
         assert_eq!(scan_type, cloned);
-        
+
         let region = RegionInfo {
             base_address: Address::new(0x7000),
             size: 0x2000,
@@ -361,7 +354,7 @@ mod tests {
             ScanType::BiggerThan,
             ScanType::SmallerThan,
         ];
-        
+
         for scan_type in types {
             let json = serde_json::to_string(&scan_type).unwrap();
             let deserialized: ScanType = serde_json::from_str(&json).unwrap();

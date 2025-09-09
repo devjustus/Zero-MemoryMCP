@@ -167,7 +167,10 @@ mod tests {
 
         assert_eq!(proc.pid, 5678);
         assert_eq!(proc.name, "chrome.exe");
-        assert_eq!(proc.path.unwrap().to_str().unwrap(), "C:\\Program Files\\Chrome\\chrome.exe");
+        assert_eq!(
+            proc.path.unwrap().to_str().unwrap(),
+            "C:\\Program Files\\Chrome\\chrome.exe"
+        );
         assert_eq!(proc.architecture, ProcessArchitecture::X64);
         assert_eq!(proc.parent_pid, Some(1000));
         assert_eq!(proc.thread_count, 25);
@@ -183,7 +186,10 @@ mod tests {
         assert_eq!(ProcessArchitecture::X64.pointer_size(), 8);
         assert_eq!(ProcessArchitecture::Arm.pointer_size(), 4);
         assert_eq!(ProcessArchitecture::Arm64.pointer_size(), 8);
-        assert_eq!(ProcessArchitecture::Unknown.pointer_size(), std::mem::size_of::<usize>());
+        assert_eq!(
+            ProcessArchitecture::Unknown.pointer_size(),
+            std::mem::size_of::<usize>()
+        );
 
         assert!(!ProcessArchitecture::X86.is_64bit());
         assert!(ProcessArchitecture::X64.is_64bit());
@@ -210,11 +216,7 @@ mod tests {
 
     #[test]
     fn test_module_address_range() {
-        let module = ModuleInfo::new(
-            "test.dll".to_string(),
-            Address::new(0x10000000),
-            0x1000,
-        );
+        let module = ModuleInfo::new("test.dll".to_string(), Address::new(0x10000000), 0x1000);
 
         assert_eq!(module.end_address(), Address::new(0x10001000));
 
@@ -227,17 +229,17 @@ mod tests {
 
     #[test]
     fn test_module_info_full() {
-        let mut module = ModuleInfo::new(
-            "ntdll.dll".to_string(),
-            Address::new(0x7FFE0000),
-            0x200000,
-        );
+        let mut module =
+            ModuleInfo::new("ntdll.dll".to_string(), Address::new(0x7FFE0000), 0x200000);
         module.path = PathBuf::from("C:\\Windows\\System32\\ntdll.dll");
         module.entry_point = Some(Address::new(0x7FFE1000));
         module.is_system = true;
 
         assert_eq!(module.name, "ntdll.dll");
-        assert_eq!(module.path.to_str().unwrap(), "C:\\Windows\\System32\\ntdll.dll");
+        assert_eq!(
+            module.path.to_str().unwrap(),
+            "C:\\Windows\\System32\\ntdll.dll"
+        );
         assert_eq!(module.base_address, Address::new(0x7FFE0000));
         assert_eq!(module.size, 0x200000);
         assert_eq!(module.entry_point, Some(Address::new(0x7FFE1000)));
@@ -259,11 +261,7 @@ mod tests {
         let deserialized: ProcessArchitecture = serde_json::from_str(&json).unwrap();
         assert_eq!(arch, deserialized);
 
-        let module = ModuleInfo::new(
-            "test.dll".to_string(),
-            Address::new(0x1000),
-            0x2000,
-        );
+        let module = ModuleInfo::new("test.dll".to_string(), Address::new(0x1000), 0x2000);
         let json = serde_json::to_string(&module).unwrap();
         let deserialized: ModuleInfo = serde_json::from_str(&json).unwrap();
         assert_eq!(module.name, deserialized.name);
