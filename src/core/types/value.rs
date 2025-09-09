@@ -443,8 +443,8 @@ mod tests {
         assert!(debug_str.contains("42"));
 
         let value_type = ValueType::F64;
-        let cloned = value_type.clone();
-        assert_eq!(value_type, cloned);
+        let copied = value_type;
+        assert_eq!(value_type, copied);
 
         let debug_str = format!("{:?}", value_type);
         assert!(debug_str.contains("F64"));

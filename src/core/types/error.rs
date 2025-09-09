@@ -54,6 +54,9 @@ pub enum MemoryError {
     #[error("Windows API error: {0}")]
     WindowsApiError(#[from] windows::core::Error),
 
+    #[error("Windows API: {0}")]
+    WindowsApi(String),
+
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
 

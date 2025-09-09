@@ -326,8 +326,8 @@ mod tests {
         assert_eq!(session.id, cloned.id);
 
         let scan_type = ScanType::Increased;
-        let cloned = scan_type.clone();
-        assert_eq!(scan_type, cloned);
+        let copied = scan_type;
+        assert_eq!(scan_type, copied);
 
         let region = RegionInfo {
             base_address: Address::new(0x7000),
