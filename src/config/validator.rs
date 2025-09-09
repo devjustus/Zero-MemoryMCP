@@ -5,6 +5,7 @@
 use super::loader::{Config, ConfigError};
 
 /// Configuration validator
+#[derive(Debug)]
 pub struct ConfigValidator;
 
 impl ConfigValidator {
@@ -208,5 +209,137 @@ mod tests {
         config.memory.max_read_size = 104857600; // 100MB
 
         assert!(validate_config(&config).is_ok());
+    }
+
+    #[test]
+    fn test_invalid_cache_size() {
+        let mut config = Config::default();
+        config.scanner.cache_size = 0;
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Cache size must be at least"));
+    }
+
+    #[test]
+    fn test_invalid_max_read_size() {
+        let mut config = Config::default();
+        config.memory.max_read_size = 0;
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Maximum read size"));
+
+        // Note: max_read_size > 100MB is just a warning, not an error
+        config.memory.max_read_size = 104857601; // > 100MB
+        let result = validate_config(&config);
+        assert!(result.is_ok()); // Should succeed with warning
+    }
+
+    #[test]
+    fn test_more_log_levels() {
+        let mut config = Config::default();
+        
+        // Test all valid log levels
+        for level in &["trace", "debug", "info", "warn", "error"] {
+            config.logging.level = level.to_string();
+            assert!(validate_config(&config).is_ok());
+        }
+
+        // Test case insensitive (currently case-sensitive)
+        config.logging.level = "INFO".to_string();
+        let result = validate_config(&config);
+        assert!(result.is_ok()); // Lowercase validation accepts uppercase
+    }
+
+    #[test]
+    fn test_chunk_size_power_of_two() {
+        let mut config = Config::default();
+        
+        // Valid powers of 2
+        for size in &[1024, 2048, 4096, 8192, 16384, 32768, 65536] {
+            config.scanner.chunk_size = *size;
+            assert!(validate_config(&config).is_ok());
+        }
+        
+        // Invalid: not power of 2
+        config.scanner.chunk_size = 3000;
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("power of 2"));
+        
+        // Invalid: zero
+        config.scanner.chunk_size = 0;
+        config.scanner.cache_size = 65536; // Reset cache_size
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("power of 2"));
+    }
+
+    #[test]
+    fn test_boundary_values() {
+        let mut config = Config::default();
+        
+        // Port boundaries
+        config.server.port = 65535; // max valid
+        assert!(validate_config(&config).is_ok());
+        
+        config.server.port = 0; // invalid
+        assert!(validate_config(&config).is_err());
+        
+        // Max connections boundaries
+        config.server.port = 3000; // reset
+        config.server.max_connections = 1001;
+        assert!(validate_config(&config).is_err());
+        
+        // Thread count boundaries
+        config.server.max_connections = 100; // reset
+        config.scanner.max_threads = 129;
+        assert!(validate_config(&config).is_err());
+        
+        config.scanner.max_threads = 0;
+        assert!(validate_config(&config).is_err());
+    }
+
+    #[test]
+    fn test_config_validator_debug() {
+        let validator = ConfigValidator;
+        let debug_str = format!("{:?}", validator);
+        assert!(debug_str.contains("ConfigValidator"));
+    }
+
+    #[test]
+    fn test_config_validation_error_chain() {
+        let mut config = Config::default();
+        config.server.port = 0;
+        config.scanner.max_threads = 500;
+        config.logging.level = "INVALID".to_string();
+        
+        // Should fail on first error (port)
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("port"));
+    }
+
+    #[test]
+    fn test_empty_strings() {
+        let mut config = Config::default();
+        config.server.host = "".to_string();
+        // Empty host is invalid
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("host"));
+        
+        config = Config::default(); // Reset config
+        config.logging.level = "".to_string();
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("log level"));
+        
+        config.logging.level = "info".to_string();
+        config.logging.file = "".to_string();
+        // Empty log file is invalid
+        let result = validate_config(&config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Log file"));
     }
 }

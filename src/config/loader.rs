@@ -289,4 +289,173 @@ mod tests {
         assert!(config.scanner.max_threads > 0);
         assert_eq!(config.memory.max_read_size, 10485760);
     }
+
+    #[test]
+    fn test_config_error_display() {
+        let err = ConfigError::FileNotFound("test.toml".to_string());
+        assert_eq!(err.to_string(), "Configuration file not found: test.toml");
+
+        let err = ConfigError::Invalid("bad config".to_string());
+        assert_eq!(err.to_string(), "Invalid configuration: bad config");
+    }
+
+    #[test]
+    fn test_load_config_function() {
+        // This will use the default path "config.toml" which doesn't exist
+        let result = load_config();
+        // Should return default config when file doesn't exist
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(config.server.host, "127.0.0.1");
+    }
+
+    #[test]
+    fn test_default_functions() {
+        // Test all the default functions are working correctly
+        let server = default_server();
+        assert_eq!(server.host, "127.0.0.1");
+        assert_eq!(server.port, 3000);
+        assert_eq!(server.max_connections, 10);
+
+        let scanner = default_scanner();
+        assert!(scanner.max_threads > 0);
+        assert!(scanner.max_threads <= 8);
+        assert_eq!(scanner.chunk_size, 65536);
+        assert_eq!(scanner.cache_size, 1048576);
+
+        let memory = default_memory();
+        assert_eq!(memory.max_read_size, 10485760);
+        assert!(memory.enable_write_protection);
+        assert!(memory.backup_before_write);
+
+        let logging = default_logging();
+        assert_eq!(logging.level, "info");
+        assert_eq!(logging.file, "memory-mcp.log");
+    }
+
+    #[test]
+    fn test_individual_field_defaults() {
+        assert_eq!(default_host(), "127.0.0.1");
+        assert_eq!(default_port(), 3000);
+        assert_eq!(default_max_connections(), 10);
+        assert!(default_max_threads() > 0);
+        assert!(default_max_threads() <= 8);
+        assert_eq!(default_chunk_size(), 65536);
+        assert_eq!(default_cache_size(), 1048576);
+        assert_eq!(default_max_read_size(), 10485760);
+        assert!(default_enable_write_protection());
+        assert!(default_backup_before_write());
+        assert_eq!(default_log_level(), "info");
+        assert_eq!(default_log_file(), "memory-mcp.log");
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_invalid_toml() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("invalid.toml");
+        
+        // Write invalid TOML
+        fs::write(&config_path, "this is not valid toml { }").unwrap();
+        
+        let loader = ConfigLoader::new(&config_path);
+        let result = loader.load();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ConfigError::TomlParse(_)));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_save_error() {
+        // Try to save to a read-only directory or invalid path
+        let loader = ConfigLoader::new("/invalid/path/that/does/not/exist/config.toml");
+        let config = Config::default();
+        let result = loader.save(&config);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), ConfigError::Io(_)));
+    }
+
+    #[test]
+    fn test_config_debug() {
+        let config = Config::default();
+        let debug_str = format!("{:?}", config);
+        assert!(debug_str.contains("Config"));
+        assert!(debug_str.contains("server"));
+        assert!(debug_str.contains("scanner"));
+    }
+
+    #[test]
+    fn test_server_config_all_fields() {
+        let toml_str = r#"
+            [server]
+            host = "192.168.1.1"
+            port = 9999
+            max_connections = 200
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.server.host, "192.168.1.1");
+        assert_eq!(config.server.port, 9999);
+        assert_eq!(config.server.max_connections, 200);
+    }
+
+    #[test]
+    fn test_scanner_config_all_fields() {
+        let toml_str = r#"
+            [scanner]
+            max_threads = 8
+            chunk_size = 8192
+            cache_size = 52428800
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.scanner.max_threads, 8);
+        assert_eq!(config.scanner.chunk_size, 8192);
+        assert_eq!(config.scanner.cache_size, 52428800);
+    }
+
+    #[test]
+    fn test_memory_config_all_fields() {
+        let toml_str = r#"
+            [memory]
+            max_read_size = 5242880
+            enable_write_protection = false
+            backup_before_write = false
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.memory.max_read_size, 5242880);
+        assert!(!config.memory.enable_write_protection);
+        assert!(!config.memory.backup_before_write);
+    }
+
+    #[test]
+    fn test_logging_config_all_fields() {
+        let toml_str = r#"
+            [logging]
+            level = "debug"
+            file = "custom.log"
+        "#;
+
+        let config: Config = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.logging.level, "debug");
+        assert_eq!(config.logging.file, "custom.log");
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config = Config::default();
+        let cloned = config.clone();
+        assert_eq!(config.server.host, cloned.server.host);
+        assert_eq!(config.server.port, cloned.server.port);
+    }
+
+    #[test]
+    fn test_from_result() {
+        let config = Config::default();
+        let result: Result<Config, ConfigError> = Ok(config.clone());
+        let converted: Result<Config, ConfigError> = result.into();
+        assert!(converted.is_ok());
+        assert_eq!(converted.unwrap().server.host, config.server.host);
+    }
 }
