@@ -51,6 +51,12 @@ pub enum MemoryError {
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(String),
 
+    #[error("Permission denied: {0}")]
+    PermissionDenied(String),
+
+    #[error("Invalid handle: {0}")]
+    InvalidHandle(String),
+
     #[error("Windows API error: {0}")]
     WindowsApiError(#[from] windows::core::Error),
 

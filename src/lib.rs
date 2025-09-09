@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod core;
+pub mod process;
 pub mod windows;
 
 // Re-export main types from core module

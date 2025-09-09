@@ -32,6 +32,7 @@ winapi = { version = "0.3", features = [
     "memoryapi",
     "processthreadsapi",
     "psapi",
+    "tlhelp32",
     "winnt",
     "minwindef",
     "basetsd",

@@ -216,11 +216,11 @@ mod tests {
     fn test_access_rights() {
         // Test various access right constants
         use winapi::um::winnt::{PROCESS_QUERY_INFORMATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
-        assert!(PROCESS_VM_READ > 0);
-        assert!(PROCESS_VM_WRITE > 0);
-        assert!(PROCESS_QUERY_INFORMATION > 0);
+        // Just verify the constants are available and have expected values
+        assert_eq!(PROCESS_VM_READ, 0x0010);
+        assert_eq!(PROCESS_VM_WRITE, 0x0020);
+        assert_eq!(PROCESS_QUERY_INFORMATION, 0x0400);
         // PROCESS_ALL_ACCESS is a combination of multiple flags
-        assert!(PROCESS_ALL_ACCESS > 0);
         assert_eq!(PROCESS_ALL_ACCESS, 0x1FFFFF); // Correct value for PROCESS_ALL_ACCESS
     }
 
