@@ -99,7 +99,7 @@ mod tests {
         }
 
         // Test valid string
-        let wide_str = vec![72u16, 101, 108, 108, 111, 0]; // "Hello\0"
+        let wide_str = [72u16, 101, 108, 108, 111, 0]; // "Hello\0"
         unsafe {
             assert_eq!(wide_ptr_to_string(wide_str.as_ptr()), "Hello");
         }

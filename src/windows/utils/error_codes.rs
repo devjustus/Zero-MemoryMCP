@@ -164,7 +164,7 @@ mod tests {
         // Test Clone, Copy, PartialEq, Eq derives
         let err1 = ErrorCode::AccessDenied;
         let err2 = err1; // Copy
-        let err3 = err1.clone(); // Clone
+        let err3 = err1; // Copy
         assert_eq!(err1, err2); // PartialEq
         assert_eq!(err1, err3);
 

@@ -201,7 +201,7 @@ mod tests {
             // Should not exceed MAX_PROCESSES
             assert!(pids.len() <= 1024);
             // Should have at least some processes
-            assert!(pids.len() > 0);
+            assert!(!pids.is_empty());
         }
     }
 }
