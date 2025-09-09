@@ -101,6 +101,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)] // Miri doesn't support Windows IO Completion Ports
     async fn test_main_components() {
         // Test that we can call the helper functions used by main
         let platform_result = verify_platform();
