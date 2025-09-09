@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+mod config;
 mod core;
 
 use anyhow::Result;
@@ -45,7 +46,22 @@ async fn main() -> Result<()> {
     info!("Platform check: Windows ✓");
     info!("Architecture: {}", arch);
 
-    // TODO: Initialize MCP server
+    // Load configuration
+    let config = config::load_config().unwrap_or_else(|e| {
+        info!("Using default configuration: {}", e);
+        config::Config::default()
+    });
+
+    // Validate configuration
+    if let Err(e) = config::validate_config(&config) {
+        anyhow::bail!("Invalid configuration: {}", e);
+    }
+
+    info!("Configuration loaded successfully");
+    info!("Server: {}:{}", config.server.host, config.server.port);
+    info!("Scanner threads: {}", config.scanner.max_threads);
+
+    // TODO: Initialize MCP server with configuration
     info!("MCP server initialization pending implementation");
 
     // Placeholder for keeping server running
@@ -130,6 +146,22 @@ mod tests {
 
         let process = core::ProcessInfo::new(1234, "test.exe".to_string());
         assert_eq!(process.pid, 1234);
+    }
+
+    #[test]
+    fn test_config_module_accessible() {
+        // Test that config module is accessible from main
+        let config = config::Config::default();
+        assert_eq!(config.server.host, "127.0.0.1");
+        assert_eq!(config.server.port, 3000);
+
+        // Test config validation
+        let result = config::validate_config(&config);
+        assert!(result.is_ok());
+
+        // Test default config creation
+        let defaults = config::default_config();
+        assert!(defaults.scanner.max_threads > 0);
     }
 
     #[test]

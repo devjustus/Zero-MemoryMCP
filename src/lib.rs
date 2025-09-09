@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+pub mod config;
 pub mod core;
 
 // Re-export main types from core module
