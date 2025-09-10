@@ -17,6 +17,13 @@ impl<'a> BasicMemoryReader<'a> {
 
     /// Read raw bytes from memory
     pub fn read_raw(&self, address: Address, size: usize) -> MemoryResult<Vec<u8>> {
+        // Prevent capacity overflow
+        if size > isize::MAX as usize {
+            return Err(MemoryError::InvalidAddress(format!(
+                "Size {} exceeds maximum allowed",
+                size
+            )));
+        }
         let mut buffer = vec![0u8; size];
         self.handle.read_memory(address.as_usize(), &mut buffer)?;
         Ok(buffer)
@@ -74,7 +81,14 @@ impl<'a> BasicMemoryReader<'a> {
 
     /// Read a wide string (UTF-16)
     pub fn read_wide_string(&self, address: Address, max_len: usize) -> MemoryResult<String> {
-        let byte_size = max_len * 2;
+        // Check for overflow in byte size calculation
+        let byte_size = max_len.saturating_mul(2);
+        if byte_size > isize::MAX as usize {
+            return Err(MemoryError::InvalidAddress(format!(
+                "Wide string size {} exceeds maximum",
+                byte_size
+            )));
+        }
         let buffer = self.read_raw(address, byte_size)?;
 
         let mut u16_buffer = Vec::with_capacity(max_len);
