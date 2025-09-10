@@ -250,7 +250,7 @@ fn test_memory_reader_with_all_types() {
 
     let result = reader.read::<bool>(Address::new(&bool_val as *const _ as usize));
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), true);
+    assert!(result.unwrap());
 
     let result = reader.read::<char>(Address::new(&char_val as *const _ as usize));
     assert!(result.is_ok());

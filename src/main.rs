@@ -62,7 +62,7 @@ fn initialize_server() -> Result<config::Config> {
 }
 
 /// Start the MCP server with the given configuration
-async fn start_server(config: config::Config) -> Result<()> {
+async fn start_server(_config: config::Config) -> Result<()> {
     // TODO: Initialize MCP server with configuration
     info!("MCP server initialization pending implementation");
 
@@ -182,7 +182,7 @@ mod tests {
         // Test server initialization
         let result = initialize_server();
         assert!(result.is_ok(), "Server initialization should succeed");
-        
+
         let config = result.unwrap();
         assert_eq!(config.server.host, "127.0.0.1");
         assert_eq!(config.server.port, 3000);
@@ -194,8 +194,8 @@ mod tests {
     async fn test_start_server_immediate_shutdown() {
         // Test that start_server can be called
         // This test doesn't actually wait for ctrl_c, just verifies the function exists
-        let config = config::Config::default();
-        
+        let _config = config::Config::default();
+
         // We can't actually test the full server start without blocking,
         // but we can verify the function signature is correct
         let _server_fn: fn(config::Config) -> _ = start_server;
