@@ -2,7 +2,8 @@
 
 use memory_mcp::core::types::{Address, MemoryError, MemoryValue, ValueType};
 use memory_mcp::memory::{
-    ComparisonType, MemoryOperations, MemoryReader, MemoryScanner, MemoryWriter, ScanOptions,
+    writer::{BatchWrite, ExtendedWrite, MemoryCopy, MemoryWrite},
+    BasicMemoryWriter, ComparisonType, MemoryOperations, MemoryReader, MemoryScanner, ScanOptions,
     ScanPattern,
 };
 use memory_mcp::process::ProcessHandle;
@@ -85,7 +86,7 @@ fn test_memory_reader_comprehensive() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_comprehensive() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test all MemoryValue variants
     let values = [
