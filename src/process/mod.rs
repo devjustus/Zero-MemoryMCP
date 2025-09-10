@@ -11,7 +11,10 @@ pub mod privileges;
 
 pub use enumerator::{enumerate_processes, ProcessEnumerator};
 pub use handle::ProcessHandle;
-pub use info::{ProcessArchitecture, ProcessInfo};
+pub use info::{
+    enumerate_modules, find_module_by_name, get_process_main_module, ModuleEnumerator,
+    ProcessArchitecture, ProcessInfo,
+};
 pub use manager::{
     AttachOptions, AttachmentGuard, DetachOptions, ProcessAttacher, ProcessDetacher,
 };
