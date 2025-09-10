@@ -1,6 +1,5 @@
 //! Integration tests for process attachment and detachment
 
-use memory_mcp::core::types::MemoryError;
 use memory_mcp::process::ProcessHandle;
 use memory_mcp::process::{AttachOptions, DetachOptions, ProcessAttacher, ProcessDetacher};
 
