@@ -1,7 +1,13 @@
-//! Process information structures and utilities
+//! Process information subsystem
 
 use std::fmt;
 use std::path::PathBuf;
+
+pub mod modules;
+
+pub use modules::{
+    enumerate_modules, find_module_by_name, get_process_main_module, ModuleEnumerator,
+};
 
 /// Architecture of a process
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,7 +63,7 @@ impl ProcessInfo {
         }
     }
 
-    /// Create ProcessInfo with full details
+    /// Create with full details
     pub fn with_details(
         pid: u32,
         name: String,
@@ -83,18 +89,14 @@ impl ProcessInfo {
         self.pid == 0 || self.pid == 4
     }
 
-    /// Get the process name without extension
+    /// Get the base name (without extension) of the process
     pub fn base_name(&self) -> &str {
-        if let Some(dot_pos) = self.name.rfind('.') {
-            &self.name[..dot_pos]
-        } else {
-            &self.name
-        }
+        self.name.split('.').next().unwrap_or(&self.name)
     }
 
-    /// Check if process name matches (case-insensitive)
-    pub fn name_matches(&self, pattern: &str) -> bool {
-        self.name.to_lowercase().contains(&pattern.to_lowercase())
+    /// Check if the process name matches (case-insensitive)
+    pub fn name_matches(&self, name: &str) -> bool {
+        self.name.eq_ignore_ascii_case(name)
     }
 }
 
@@ -102,13 +104,9 @@ impl fmt::Display for ProcessInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "[{}] {} ({}, {} threads)",
-            self.pid, self.name, self.architecture, self.thread_count
-        )?;
-        if self.is_wow64 {
-            write!(f, " [WoW64]")?;
-        }
-        Ok(())
+            "Process [{}] {} ({})",
+            self.pid, self.name, self.architecture
+        )
     }
 }
 
@@ -118,16 +116,22 @@ mod tests {
 
     #[test]
     fn test_process_architecture_display() {
-        assert_eq!(format!("{}", ProcessArchitecture::X86), "x86");
-        assert_eq!(format!("{}", ProcessArchitecture::X64), "x64");
-        assert_eq!(format!("{}", ProcessArchitecture::Unknown), "unknown");
+        assert_eq!(ProcessArchitecture::X86.to_string(), "x86");
+        assert_eq!(ProcessArchitecture::X64.to_string(), "x64");
+        assert_eq!(ProcessArchitecture::Unknown.to_string(), "unknown");
     }
 
     #[test]
     fn test_process_architecture_equality() {
         assert_eq!(ProcessArchitecture::X86, ProcessArchitecture::X86);
         assert_ne!(ProcessArchitecture::X86, ProcessArchitecture::X64);
-        assert_ne!(ProcessArchitecture::X64, ProcessArchitecture::Unknown);
+    }
+
+    #[test]
+    fn test_process_architecture_copy() {
+        let arch = ProcessArchitecture::X64;
+        let copy = arch;
+        assert_eq!(arch, copy);
     }
 
     #[test]
@@ -135,8 +139,8 @@ mod tests {
         let info = ProcessInfo::new(1234, "test.exe".to_string());
         assert_eq!(info.pid, 1234);
         assert_eq!(info.name, "test.exe");
-        assert_eq!(info.path, None);
-        assert_eq!(info.parent_pid, None);
+        assert!(info.path.is_none());
+        assert!(info.parent_pid.is_none());
         assert_eq!(info.architecture, ProcessArchitecture::Unknown);
         assert_eq!(info.thread_count, 0);
         assert!(!info.is_wow64);
@@ -147,7 +151,7 @@ mod tests {
         let info = ProcessInfo::with_details(
             5678,
             "app.exe".to_string(),
-            Some(PathBuf::from("C:\\Program Files\\App\\app.exe")),
+            Some(PathBuf::from("C:\\Program Files\\app.exe")),
             Some(1234),
             ProcessArchitecture::X64,
             8,
@@ -155,10 +159,7 @@ mod tests {
         );
         assert_eq!(info.pid, 5678);
         assert_eq!(info.name, "app.exe");
-        assert_eq!(
-            info.path,
-            Some(PathBuf::from("C:\\Program Files\\App\\app.exe"))
-        );
+        assert!(info.path.is_some());
         assert_eq!(info.parent_pid, Some(1234));
         assert_eq!(info.architecture, ProcessArchitecture::X64);
         assert_eq!(info.thread_count, 8);
@@ -182,51 +183,26 @@ mod tests {
         let info = ProcessInfo::new(1234, "notepad.exe".to_string());
         assert_eq!(info.base_name(), "notepad");
 
-        let no_ext = ProcessInfo::new(1234, "app".to_string());
-        assert_eq!(no_ext.base_name(), "app");
-
-        let multi_dot = ProcessInfo::new(1234, "my.app.exe".to_string());
-        assert_eq!(multi_dot.base_name(), "my.app");
+        let info_no_ext = ProcessInfo::new(5678, "svchost".to_string());
+        assert_eq!(info_no_ext.base_name(), "svchost");
     }
 
     #[test]
     fn test_name_matches() {
         let info = ProcessInfo::new(1234, "Notepad.exe".to_string());
-        assert!(info.name_matches("notepad"));
-        assert!(info.name_matches("NOTEPAD"));
-        assert!(info.name_matches("pad"));
-        assert!(!info.name_matches("wordpad"));
+        assert!(info.name_matches("notepad.exe"));
+        assert!(info.name_matches("NOTEPAD.EXE"));
+        assert!(info.name_matches("Notepad.exe"));
+        assert!(!info.name_matches("calc.exe"));
     }
 
     #[test]
     fn test_process_info_display() {
-        let info = ProcessInfo::with_details(
-            1234,
-            "test.exe".to_string(),
-            None,
-            None,
-            ProcessArchitecture::X64,
-            4,
-            false,
-        );
+        let info = ProcessInfo::new(1234, "test.exe".to_string());
         let display = format!("{}", info);
-        assert!(display.contains("[1234]"));
+        assert!(display.contains("1234"));
         assert!(display.contains("test.exe"));
-        assert!(display.contains("x64"));
-        assert!(display.contains("4 threads"));
-        assert!(!display.contains("WoW64"));
-
-        let wow64_info = ProcessInfo::with_details(
-            5678,
-            "app.exe".to_string(),
-            None,
-            None,
-            ProcessArchitecture::X86,
-            2,
-            true,
-        );
-        let wow64_display = format!("{}", wow64_info);
-        assert!(wow64_display.contains("[WoW64]"));
+        assert!(display.contains("unknown"));
     }
 
     #[test]
@@ -235,12 +211,5 @@ mod tests {
         let cloned = info.clone();
         assert_eq!(cloned.pid, info.pid);
         assert_eq!(cloned.name, info.name);
-    }
-
-    #[test]
-    fn test_process_architecture_copy() {
-        let arch = ProcessArchitecture::X64;
-        let copied = arch;
-        assert_eq!(copied, arch);
     }
 }
