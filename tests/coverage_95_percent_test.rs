@@ -80,8 +80,8 @@ mod scanner_coverage {
         let _ = scanner.find_value(-1234i16, ScanOptions::default());
         let _ = scanner.find_value(-123456789i32, ScanOptions::default());
         let _ = scanner.find_value(-1234567890123456789i64, ScanOptions::default());
-        let _ = scanner.find_value(3.14f32, ScanOptions::default());
-        let _ = scanner.find_value(2.71828f64, ScanOptions::default());
+        let _ = scanner.find_value(std::f32::consts::PI, ScanOptions::default());
+        let _ = scanner.find_value(std::f64::consts::E, ScanOptions::default());
     }
 
     #[test]
@@ -233,8 +233,8 @@ mod writer_comprehensive_coverage {
         let _ = writer.write_verified(Address::new(0x1000), 0xDEADBEEFu32);
         let _ = writer.write_verified(Address::new(0x1000), 0x123456789ABCDEFu64);
         let _ = writer.write_verified(Address::new(0x1000), -42i32);
-        let _ = writer.write_verified(Address::new(0x1000), 3.14f32);
-        let _ = writer.write_verified(Address::new(0x1000), 2.71828f64);
+        let _ = writer.write_verified(Address::new(0x1000), std::f32::consts::PI);
+        let _ = writer.write_verified(Address::new(0x1000), std::f64::consts::E);
 
         // Test write_with_backup
         let _ = writer.write_with_backup(Address::new(0x1000), [0u8; 256]);

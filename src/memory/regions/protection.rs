@@ -111,7 +111,7 @@ impl ProtectionFlags {
     }
 
     /// Convert to human-readable string
-    pub fn to_string(&self) -> String {
+    fn format_string(&self) -> String {
         let base = match self.value & 0xFF {
             Self::PAGE_NOACCESS => "NOACCESS",
             Self::PAGE_READONLY => "R",
@@ -139,7 +139,7 @@ impl ProtectionFlags {
 
 impl std::fmt::Display for ProtectionFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.format_string())
     }
 }
 
@@ -322,12 +322,12 @@ mod tests {
 
     #[test]
     fn test_protection_string_conversion() {
-        assert_eq!(ProtectionFlags::read_only().to_string(), "R");
-        assert_eq!(ProtectionFlags::read_write().to_string(), "RW");
-        assert_eq!(ProtectionFlags::execute_read_write().to_string(), "RWX");
+        assert_eq!(format!("{}", ProtectionFlags::read_only()), "R");
+        assert_eq!(format!("{}", ProtectionFlags::read_write()), "RW");
+        assert_eq!(format!("{}", ProtectionFlags::execute_read_write()), "RWX");
         
         let guard_rw = ProtectionFlags::read_write().with_guard();
-        assert_eq!(guard_rw.to_string(), "RW+G");
+        assert_eq!(format!("{}", guard_rw), "RW+G");
     }
 
     #[test]

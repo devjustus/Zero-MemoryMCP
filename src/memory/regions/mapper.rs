@@ -47,7 +47,7 @@ pub enum MappingAccess {
 
 impl MappingAccess {
     /// Convert to Windows FILE_MAP_* constant
-    fn to_file_map_access(&self) -> DWORD {
+    fn to_file_map_access(self) -> DWORD {
         match self {
             MappingAccess::ReadOnly => 0x0004,        // FILE_MAP_READ
             MappingAccess::ReadWrite => 0x0002,       // FILE_MAP_WRITE
@@ -57,7 +57,7 @@ impl MappingAccess {
     }
 
     /// Convert to Windows PAGE_* protection constant
-    fn to_page_protection(&self) -> DWORD {
+    fn to_page_protection(self) -> DWORD {
         match self {
             MappingAccess::ReadOnly => 0x02,          // PAGE_READONLY
             MappingAccess::ReadWrite => 0x04,         // PAGE_READWRITE
@@ -93,11 +93,17 @@ impl MappedRegion {
     }
 
     /// Get the mapped memory as a slice
+    /// 
+    /// # Safety
+    /// The caller must ensure the mapped memory is valid and accessible
     pub unsafe fn as_slice(&self) -> &[u8] {
         std::slice::from_raw_parts(self.as_ptr(), self.size)
     }
 
     /// Get the mapped memory as a mutable slice
+    /// 
+    /// # Safety
+    /// The caller must ensure the mapped memory is valid, accessible, and writable
     pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
         std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.size)
     }
@@ -197,7 +203,10 @@ impl MemoryMapper {
     }
 
     /// Map a view of a file into memory
-    pub fn map_file_view(
+    /// 
+    /// # Safety
+    /// The caller must ensure that file_mapping is a valid handle from CreateFileMapping
+    pub unsafe fn map_file_view(
         &self,
         file_mapping: HANDLE,
         options: MappingOptions,

@@ -178,10 +178,10 @@ impl Iterator for RegionEnumerator {
 /// Enumerate all memory regions for the current process
 pub fn enumerate_regions() -> MemoryResult<Vec<RegionInfo>> {
     let handle = ProcessHandle::open_for_read(std::process::id())?;
-    let mut enumerator = RegionEnumerator::new(handle);
+    let enumerator = RegionEnumerator::new(handle);
     let mut regions = Vec::new();
     
-    while let Some(region) = enumerator.next() {
+    for region in enumerator {
         regions.push(region);
     }
     
