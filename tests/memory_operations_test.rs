@@ -2,7 +2,9 @@
 
 use memory_mcp::core::types::{Address, MemoryValue, ValueType};
 use memory_mcp::memory::{
-    MemoryOperations, MemoryReader, MemoryScanner, MemoryWriter, ScanOptions, ScanPattern,
+    writer::{BatchWrite, ExtendedWrite, MemoryCopy, MemoryWrite},
+    BasicMemoryWriter, MemoryOperations, MemoryReader, MemoryScanner, SafeMemoryWriter,
+    ScanOptions, ScanPattern,
 };
 use memory_mcp::process::ProcessHandle;
 use std::process;
@@ -149,7 +151,7 @@ fn test_memory_writer_with_current_process() {
     // Get handle with write access for current process
     let pid = process::id();
     let handle = ProcessHandle::open_for_read_write(pid).expect("Failed to open with write access");
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Create a mutable test variable
     let mut test_buffer = vec![0u8; 16];
@@ -163,8 +165,9 @@ fn test_memory_writer_with_current_process() {
     if result.is_ok() {
         assert_eq!(&test_buffer[..4], &data[..]);
 
-        // Test write verification
-        let verify_result = writer.write_verified(buffer_addr, 0x12345678u32);
+        // Test write verification with SafeMemoryWriter
+        let safe_writer = SafeMemoryWriter::new(&handle);
+        let verify_result = safe_writer.write_verified(buffer_addr, 0x12345678u32);
         assert!(verify_result.is_ok() || verify_result.is_err()); // May fail due to permissions
     }
 }
@@ -173,7 +176,7 @@ fn test_memory_writer_with_current_process() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_memory_value_types() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test with different MemoryValue types
     let values = vec![
@@ -337,7 +340,7 @@ fn test_scan_options_builder_pattern() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_batch_operations() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test batch write (will fail with read-only handle but tests the code)
     let writes = vec![(Address::new(0x1000), 42u32), (Address::new(0x2000), 84u32)];
@@ -353,7 +356,7 @@ fn test_memory_writer_batch_operations() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_fill_operation() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test fill operation (will fail but tests the code path)
     let result = writer.fill(Address::new(0x1000), 0xCC, 100);
@@ -420,7 +423,7 @@ fn test_memory_scanner_comparison_types() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_copy_and_swap() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Create test buffers
     let buffer1 = [1u8, 2, 3, 4];
@@ -500,7 +503,7 @@ fn test_scan_pattern_variations() {
 #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_memory_writer_wide_string_operations() {
     let handle = get_test_handle();
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test writing wide string (will fail but tests the code path)
     let result = writer.write_wide_string(Address::new(0x1000), "Hello 世界");
@@ -568,7 +571,7 @@ fn test_scan_options_custom_settings() {
 fn test_memory_value_all_types() {
     let handle = get_test_handle();
     let reader = MemoryReader::new(&handle);
-    let writer = MemoryWriter::new(&handle);
+    let writer = BasicMemoryWriter::new(&handle);
 
     // Test all MemoryValue variants
     let values = vec![

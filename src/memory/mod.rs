@@ -12,7 +12,7 @@ pub mod writer;
 
 pub use reader::{BasicMemoryReader, MemoryReader, ReadCache, Reader, SafeMemoryReader};
 pub use scanner::{ComparisonType, MemoryScanner, ScanOptions, ScanPattern};
-pub use writer::MemoryWriter;
+pub use writer::{create_safe_writer, create_writer, BasicMemoryWriter, SafeMemoryWriter};
 
 use crate::core::types::{Address, MemoryError, MemoryResult, MemoryValue};
 use crate::process::ProcessHandle;
@@ -41,8 +41,13 @@ impl MemoryOperations {
     }
 
     /// Get a reference to the memory writer
-    pub fn writer(&self) -> MemoryWriter<'_> {
-        MemoryWriter::new(&self.handle)
+    pub fn writer(&self) -> BasicMemoryWriter<'_> {
+        BasicMemoryWriter::new(&self.handle)
+    }
+
+    /// Get a safe memory writer with validation
+    pub fn safe_writer(&self) -> SafeMemoryWriter<'_> {
+        SafeMemoryWriter::new(&self.handle)
     }
 
     /// Get a reference to the memory scanner
@@ -58,7 +63,8 @@ impl MemoryOperations {
 
     /// Write a value to memory
     pub fn write<T: Copy>(&self, address: Address, value: T) -> MemoryResult<()> {
-        let writer = MemoryWriter::new(&self.handle);
+        use writer::MemoryWrite;
+        let writer = BasicMemoryWriter::new(&self.handle);
         writer.write(address, value)
     }
 
