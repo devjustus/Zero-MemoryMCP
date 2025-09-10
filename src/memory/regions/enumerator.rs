@@ -30,7 +30,7 @@ impl RegionInfo {
     pub fn is_readable(&self) -> bool {
         const PAGE_NOACCESS: u32 = 0x01;
         const PAGE_GUARD: u32 = 0x100;
-        
+
         self.protection != PAGE_NOACCESS && (self.protection & PAGE_GUARD) == 0
     }
 
@@ -40,9 +40,10 @@ impl RegionInfo {
         const PAGE_WRITECOPY: u32 = 0x08;
         const PAGE_EXECUTE_READWRITE: u32 = 0x40;
         const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
-        
-        (self.protection & (PAGE_READWRITE | PAGE_WRITECOPY | 
-                          PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0
+
+        (self.protection
+            & (PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY))
+            != 0
     }
 
     /// Check if the region is executable
@@ -51,9 +52,10 @@ impl RegionInfo {
         const PAGE_EXECUTE_READ: u32 = 0x20;
         const PAGE_EXECUTE_READWRITE: u32 = 0x40;
         const PAGE_EXECUTE_WRITECOPY: u32 = 0x80;
-        
-        (self.protection & (PAGE_EXECUTE | PAGE_EXECUTE_READ | 
-                          PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0
+
+        (self.protection
+            & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY))
+            != 0
     }
 
     /// Check if the region is guarded
@@ -103,24 +105,23 @@ impl RegionEnumerator {
     /// Get the next memory region
     pub fn next_region(&mut self) -> Option<RegionInfo> {
         while self.current_address < self.max_address {
-            match unsafe { kernel32::virtual_query_ex(self.handle.raw(), self.current_address.as_usize()) } {
+            match unsafe {
+                kernel32::virtual_query_ex(self.handle.raw(), self.current_address.as_usize())
+            } {
                 Ok(mbi) => {
                     let region = self.parse_memory_info(&mbi);
-                    
+
                     // Move to next region
-                    self.current_address = Address::new(
-                        mbi.BaseAddress as usize + mbi.RegionSize
-                    );
-                    
+                    self.current_address = Address::new(mbi.BaseAddress as usize + mbi.RegionSize);
+
                     return Some(region);
                 }
                 Err(_) => {
                     // Error querying memory, try next page
                     const PAGE_SIZE: usize = 4096;
-                    self.current_address = Address::new(
-                        self.current_address.as_usize() + PAGE_SIZE
-                    );
-                    
+                    self.current_address =
+                        Address::new(self.current_address.as_usize() + PAGE_SIZE);
+
                     // Stop if we've gone too far
                     if self.current_address >= self.max_address {
                         break;
@@ -128,7 +129,7 @@ impl RegionEnumerator {
                 }
             }
         }
-        
+
         None
     }
 
@@ -180,24 +181,27 @@ pub fn enumerate_regions() -> MemoryResult<Vec<RegionInfo>> {
     let handle = ProcessHandle::open_for_read(std::process::id())?;
     let enumerator = RegionEnumerator::new(handle);
     let mut regions = Vec::new();
-    
+
     for region in enumerator {
         regions.push(region);
     }
-    
+
     Ok(regions)
 }
 
 /// Query information about a specific memory region
 pub fn query_region_at(address: Address) -> MemoryResult<RegionInfo> {
     let handle = ProcessHandle::open_for_read(std::process::id())?;
-    
+
     match unsafe { kernel32::virtual_query_ex(handle.raw(), address.as_usize()) } {
         Ok(mbi) => {
             let enumerator = RegionEnumerator::new(handle);
             Ok(enumerator.parse_memory_info(&mbi))
         }
-        Err(e) => Err(MemoryError::WindowsApi(format!("Failed to query region: {}", e))),
+        Err(e) => Err(MemoryError::WindowsApi(format!(
+            "Failed to query region: {}",
+            e
+        ))),
     }
 }
 
@@ -232,9 +236,12 @@ mod tests {
         // This should work for the current process
         let result = enumerate_regions();
         assert!(result.is_ok());
-        
+
         let regions = result.unwrap();
-        assert!(!regions.is_empty(), "Should find at least one memory region");
+        assert!(
+            !regions.is_empty(),
+            "Should find at least one memory region"
+        );
     }
 
     #[test]

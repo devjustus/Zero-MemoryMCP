@@ -67,14 +67,22 @@ impl ProtectionFlags {
 
     /// Check if protection allows writing
     pub fn is_writable(&self) -> bool {
-        (self.value & (Self::PAGE_READWRITE | Self::PAGE_WRITECOPY | 
-                      Self::PAGE_EXECUTE_READWRITE | Self::PAGE_EXECUTE_WRITECOPY)) != 0
+        (self.value
+            & (Self::PAGE_READWRITE
+                | Self::PAGE_WRITECOPY
+                | Self::PAGE_EXECUTE_READWRITE
+                | Self::PAGE_EXECUTE_WRITECOPY))
+            != 0
     }
 
     /// Check if protection allows execution
     pub fn is_executable(&self) -> bool {
-        (self.value & (Self::PAGE_EXECUTE | Self::PAGE_EXECUTE_READ | 
-                      Self::PAGE_EXECUTE_READWRITE | Self::PAGE_EXECUTE_WRITECOPY)) != 0
+        (self.value
+            & (Self::PAGE_EXECUTE
+                | Self::PAGE_EXECUTE_READ
+                | Self::PAGE_EXECUTE_READWRITE
+                | Self::PAGE_EXECUTE_WRITECOPY))
+            != 0
     }
 
     /// Check if guard page flag is set
@@ -125,14 +133,14 @@ impl ProtectionFlags {
         };
 
         let mut flags = String::from(base);
-        
+
         if self.is_guard() {
             flags.push_str("+G");
         }
         if self.is_no_cache() {
             flags.push_str("+NC");
         }
-        
+
         flags
     }
 }
@@ -175,12 +183,14 @@ impl ProtectionManager {
         new_protection: ProtectionFlags,
     ) -> MemoryResult<ProtectionChange> {
         if size == 0 {
-            return Err(MemoryError::InvalidValueType("Size cannot be zero".to_string()));
+            return Err(MemoryError::InvalidValueType(
+                "Size cannot be zero".to_string(),
+            ));
         }
 
         unsafe {
             let mut old_protection: DWORD = 0;
-            
+
             let result = VirtualProtectEx(
                 self.handle.raw(),
                 address.as_usize() as *mut _,
@@ -217,13 +227,13 @@ impl ProtectionManager {
     {
         // Change to read-write
         let change = self.change_protection(address, size, ProtectionFlags::read_write())?;
-        
+
         // Perform the operation
         let result = operation();
-        
+
         // Restore original protection
         let _ = self.change_protection(address, size, change.old_protection);
-        
+
         result
     }
 
@@ -232,10 +242,10 @@ impl ProtectionManager {
         // Get current protection
         let info = crate::memory::regions::query_region_at(address)?;
         let current = ProtectionFlags::new(info.protection);
-        
+
         // Add guard flag
         let new_protection = current.with_guard();
-        
+
         self.change_protection(address, size, new_protection)?;
         Ok(())
     }
@@ -245,10 +255,10 @@ impl ProtectionManager {
         // Get current protection
         let info = crate::memory::regions::query_region_at(address)?;
         let current = ProtectionFlags::new(info.protection);
-        
+
         // Remove guard flag
         let new_protection = current.without_guard();
-        
+
         self.change_protection(address, size, new_protection)?;
         Ok(())
     }
@@ -258,7 +268,7 @@ impl ProtectionManager {
         // Get current protection to determine if it's readable/writable
         let info = crate::memory::regions::query_region_at(address)?;
         let current = ProtectionFlags::new(info.protection);
-        
+
         let new_protection = if current.is_writable() {
             ProtectionFlags::execute_read_write()
         } else if current.is_readable() {
@@ -266,15 +276,19 @@ impl ProtectionManager {
         } else {
             ProtectionFlags::execute()
         };
-        
+
         self.change_protection(address, size, new_protection)
     }
 
     /// Make a region non-executable
-    pub fn make_non_executable(&self, address: Address, size: usize) -> MemoryResult<ProtectionChange> {
+    pub fn make_non_executable(
+        &self,
+        address: Address,
+        size: usize,
+    ) -> MemoryResult<ProtectionChange> {
         let info = crate::memory::regions::query_region_at(address)?;
         let current = ProtectionFlags::new(info.protection);
-        
+
         let new_protection = if current.is_writable() {
             ProtectionFlags::read_write()
         } else if current.is_readable() {
@@ -282,7 +296,7 @@ impl ProtectionManager {
         } else {
             ProtectionFlags::no_access()
         };
-        
+
         self.change_protection(address, size, new_protection)
     }
 }
@@ -325,7 +339,7 @@ mod tests {
         assert_eq!(format!("{}", ProtectionFlags::read_only()), "R");
         assert_eq!(format!("{}", ProtectionFlags::read_write()), "RW");
         assert_eq!(format!("{}", ProtectionFlags::execute_read_write()), "RWX");
-        
+
         let guard_rw = ProtectionFlags::read_write().with_guard();
         assert_eq!(format!("{}", guard_rw), "RW+G");
     }
@@ -336,7 +350,7 @@ mod tests {
         use std::ptr;
         use winapi::um::memoryapi::{VirtualAlloc, VirtualFree};
         use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE};
-        
+
         unsafe {
             // Allocate some memory
             let mem = VirtualAlloc(
@@ -345,26 +359,22 @@ mod tests {
                 MEM_COMMIT | MEM_RESERVE,
                 ProtectionFlags::PAGE_READWRITE,
             );
-            
+
             if !mem.is_null() {
                 let address = Address::new(mem as usize);
-                
+
                 // Try to change protection
                 let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
                 let manager = ProtectionManager::new(handle);
-                
-                let result = manager.change_protection(
-                    address,
-                    4096,
-                    ProtectionFlags::read_only(),
-                );
-                
+
+                let result = manager.change_protection(address, 4096, ProtectionFlags::read_only());
+
                 assert!(result.is_ok());
-                
+
                 let change = result.unwrap();
                 assert_eq!(change.old_protection.raw(), ProtectionFlags::PAGE_READWRITE);
                 assert_eq!(change.new_protection.raw(), ProtectionFlags::PAGE_READONLY);
-                
+
                 // Clean up
                 VirtualFree(mem, 0, MEM_RELEASE);
             }

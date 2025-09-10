@@ -10,9 +10,9 @@ pub mod mapper;
 pub mod protection;
 
 pub use enumerator::{enumerate_regions, query_region_at, RegionEnumerator, RegionInfo};
-pub use filter::{RegionFilter, FilterCriteria};
-pub use mapper::{MemoryMapper, MappingOptions, MappedRegion};
-pub use protection::{ProtectionFlags, ProtectionManager, change_protection};
+pub use filter::{FilterCriteria, RegionFilter};
+pub use mapper::{MappedRegion, MappingOptions, MemoryMapper};
+pub use protection::{change_protection, ProtectionFlags, ProtectionManager};
 
 use crate::core::types::{Address, MemoryResult};
 

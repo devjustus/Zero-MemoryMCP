@@ -49,20 +49,20 @@ impl MappingAccess {
     /// Convert to Windows FILE_MAP_* constant
     fn to_file_map_access(self) -> DWORD {
         match self {
-            MappingAccess::ReadOnly => 0x0004,        // FILE_MAP_READ
-            MappingAccess::ReadWrite => 0x0002,       // FILE_MAP_WRITE
+            MappingAccess::ReadOnly => 0x0004,         // FILE_MAP_READ
+            MappingAccess::ReadWrite => 0x0002,        // FILE_MAP_WRITE
             MappingAccess::ReadWriteExecute => 0x0020, // FILE_MAP_EXECUTE
-            MappingAccess::CopyOnWrite => 0x0001,     // FILE_MAP_COPY
+            MappingAccess::CopyOnWrite => 0x0001,      // FILE_MAP_COPY
         }
     }
 
     /// Convert to Windows PAGE_* protection constant
     fn to_page_protection(self) -> DWORD {
         match self {
-            MappingAccess::ReadOnly => 0x02,          // PAGE_READONLY
-            MappingAccess::ReadWrite => 0x04,         // PAGE_READWRITE
-            MappingAccess::ReadWriteExecute => 0x40,  // PAGE_EXECUTE_READWRITE
-            MappingAccess::CopyOnWrite => 0x08,       // PAGE_WRITECOPY
+            MappingAccess::ReadOnly => 0x02,         // PAGE_READONLY
+            MappingAccess::ReadWrite => 0x04,        // PAGE_READWRITE
+            MappingAccess::ReadWriteExecute => 0x40, // PAGE_EXECUTE_READWRITE
+            MappingAccess::CopyOnWrite => 0x08,      // PAGE_WRITECOPY
         }
     }
 }
@@ -93,7 +93,7 @@ impl MappedRegion {
     }
 
     /// Get the mapped memory as a slice
-    /// 
+    ///
     /// # Safety
     /// The caller must ensure the mapped memory is valid and accessible
     pub unsafe fn as_slice(&self) -> &[u8] {
@@ -101,7 +101,7 @@ impl MappedRegion {
     }
 
     /// Get the mapped memory as a mutable slice
-    /// 
+    ///
     /// # Safety
     /// The caller must ensure the mapped memory is valid, accessible, and writable
     pub unsafe fn as_mut_slice(&mut self) -> &mut [u8] {
@@ -121,7 +121,7 @@ impl MappedRegion {
         if self.is_file_mapping {
             unsafe {
                 use winapi::um::memoryapi::FlushViewOfFile;
-                
+
                 if FlushViewOfFile(self.base_address.as_usize() as *const _, self.size) == FALSE {
                     return Err(MemoryError::WindowsApi(
                         "Failed to flush mapped region".to_string(),
@@ -144,11 +144,7 @@ impl Drop for MappedRegion {
                     }
                 }
             } else {
-                VirtualFree(
-                    self.base_address.as_usize() as *mut _,
-                    0,
-                    MEM_RELEASE,
-                );
+                VirtualFree(self.base_address.as_usize() as *mut _, 0, MEM_RELEASE);
             }
         }
     }
@@ -178,13 +174,8 @@ impl MemoryMapper {
                 .unwrap_or(ptr::null_mut());
 
             let protection = options.access.to_page_protection();
-            
-            let allocated = VirtualAlloc(
-                base_addr,
-                size,
-                MEM_COMMIT | MEM_RESERVE,
-                protection,
-            );
+
+            let allocated = VirtualAlloc(base_addr, size, MEM_COMMIT | MEM_RESERVE, protection);
 
             if allocated.is_null() {
                 return Err(MemoryError::WindowsApi(
@@ -203,7 +194,7 @@ impl MemoryMapper {
     }
 
     /// Map a view of a file into memory
-    /// 
+    ///
     /// # Safety
     /// The caller must ensure that file_mapping is a valid handle from CreateFileMapping
     pub unsafe fn map_file_view(
@@ -222,13 +213,8 @@ impl MemoryMapper {
             let offset_high = (options.offset >> 32) as DWORD;
             let offset_low = (options.offset & 0xFFFFFFFF) as DWORD;
 
-            let base_addr = MapViewOfFile(
-                file_mapping,
-                access,
-                offset_high,
-                offset_low,
-                options.size,
-            );
+            let base_addr =
+                MapViewOfFile(file_mapping, access, offset_high, offset_low, options.size);
 
             if base_addr.is_null() {
                 return Err(MemoryError::WindowsApi(
@@ -240,21 +226,21 @@ impl MemoryMapper {
             let actual_size = if options.size == 0 {
                 use winapi::um::memoryapi::VirtualQuery;
                 use winapi::um::winnt::MEMORY_BASIC_INFORMATION;
-                
+
                 let mut mbi: MEMORY_BASIC_INFORMATION = std::mem::zeroed();
                 let result = VirtualQuery(
                     base_addr,
                     &mut mbi,
                     std::mem::size_of::<MEMORY_BASIC_INFORMATION>(),
                 );
-                
+
                 if result == 0 {
                     UnmapViewOfFile(base_addr);
                     return Err(MemoryError::WindowsApi(
                         "Failed to query mapped region size".to_string(),
                     ));
                 }
-                
+
                 mbi.RegionSize
             } else {
                 options.size
@@ -273,12 +259,7 @@ impl MemoryMapper {
     /// Reserve a region of memory without committing it
     pub fn reserve_memory(&self, size: usize) -> MemoryResult<Address> {
         unsafe {
-            let reserved = VirtualAlloc(
-                ptr::null_mut(),
-                size,
-                MEM_RESERVE,
-                PAGE_READWRITE,
-            );
+            let reserved = VirtualAlloc(ptr::null_mut(), size, MEM_RESERVE, PAGE_READWRITE);
 
             if reserved.is_null() {
                 return Err(MemoryError::WindowsApi(
@@ -299,13 +280,8 @@ impl MemoryMapper {
     ) -> MemoryResult<()> {
         unsafe {
             let protection = access.to_page_protection();
-            
-            let result = VirtualAlloc(
-                address.as_usize() as *mut _,
-                size,
-                MEM_COMMIT,
-                protection,
-            );
+
+            let result = VirtualAlloc(address.as_usize() as *mut _, size, MEM_COMMIT, protection);
 
             if result.is_null() {
                 return Err(MemoryError::WindowsApi(
@@ -324,12 +300,13 @@ impl MemoryMapper {
         size: usize,
         access: MappingAccess,
     ) -> MemoryResult<MappedRegion> {
-        use winapi::um::winbase::CreateFileMappingA;
-        use winapi::um::handleapi::INVALID_HANDLE_VALUE;
         use std::ffi::CString;
+        use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+        use winapi::um::winbase::CreateFileMappingA;
 
-        let c_name = CString::new(name).map_err(|_| 
-            MemoryError::InvalidValueType("Invalid name for shared memory".to_string()))?;
+        let c_name = CString::new(name).map_err(|_| {
+            MemoryError::InvalidValueType("Invalid name for shared memory".to_string())
+        })?;
         let protection = access.to_page_protection();
 
         unsafe {
@@ -369,7 +346,7 @@ mod tests {
         assert_eq!(MappingAccess::ReadOnly.to_file_map_access(), 0x0004);
         assert_eq!(MappingAccess::ReadWrite.to_file_map_access(), 0x0002);
         assert_eq!(MappingAccess::ReadWriteExecute.to_file_map_access(), 0x0020);
-        
+
         assert_eq!(MappingAccess::ReadOnly.to_page_protection(), 0x02);
         assert_eq!(MappingAccess::ReadWrite.to_page_protection(), 0x04);
         assert_eq!(MappingAccess::ReadWriteExecute.to_page_protection(), 0x40);
@@ -380,7 +357,7 @@ mod tests {
     fn test_allocate_virtual_memory() {
         let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
         let mapper = MemoryMapper::new(handle);
-        
+
         let result = mapper.allocate_memory(
             4096,
             MappingOptions {
@@ -388,12 +365,12 @@ mod tests {
                 ..Default::default()
             },
         );
-        
+
         assert!(result.is_ok());
         let region = result.unwrap();
         assert_eq!(region.size, 4096);
         assert!(!region.base_address.is_null());
-        
+
         // Region will be freed when dropped
     }
 
@@ -402,17 +379,17 @@ mod tests {
     fn test_reserve_and_commit() {
         let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
         let mapper = MemoryMapper::new(handle);
-        
+
         // Reserve memory
         let reserved = mapper.reserve_memory(8192);
         assert!(reserved.is_ok());
-        
+
         let address = reserved.unwrap();
-        
+
         // Commit part of it
         let result = mapper.commit_memory(address, 4096, MappingAccess::ReadWrite);
         assert!(result.is_ok());
-        
+
         // Clean up
         unsafe {
             VirtualFree(address.as_usize() as *mut _, 0, MEM_RELEASE);

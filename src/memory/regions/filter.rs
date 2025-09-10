@@ -123,7 +123,7 @@ impl RegionFilter {
                 return false;
             }
         }
-        
+
         if let Some(max) = self.criteria.max_size {
             if region.size > max {
                 return false;
@@ -273,15 +273,12 @@ mod tests {
             FilterCriteria::new()
                 .with_min_size(4096)
                 .readable()
-                .with_state(RegionState::Committed)
+                .with_state(RegionState::Committed),
         );
 
         assert!(filter.matches(&region));
 
-        let filter2 = RegionFilter::new(
-            FilterCriteria::new()
-                .executable()
-        );
+        let filter2 = RegionFilter::new(FilterCriteria::new().executable());
 
         assert!(!filter2.matches(&region));
     }
