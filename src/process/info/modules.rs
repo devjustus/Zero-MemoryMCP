@@ -171,6 +171,7 @@ mod tests {
     use std::process;
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_module_enumerator_creation() {
         // Get current process handle
         let handle =
