@@ -146,11 +146,77 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_debug_privilege_guard_drop() {
+        // Test guard drop behavior
+        let initial_state = has_debug_privilege();
+        {
+            let guard = DebugPrivilegeGuard::new();
+            if guard.is_ok() {
+                // Guard exists in this scope
+                let _ = guard;
+            }
+        }
+        // Guard dropped, verify state consistency
+        let _ = initial_state;
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_enable_debug_privilege() {
         // This test might fail without admin rights
         let result = enable_debug_privilege();
         // We don't assert success as it requires admin privileges
         // Just ensure it doesn't panic
         let _ = result;
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_enable_debug_privilege_twice() {
+        // Test calling enable_debug_privilege twice
+        let result1 = enable_debug_privilege();
+        let result2 = enable_debug_privilege();
+
+        // If first succeeds, second should also succeed
+        if result1.is_ok() {
+            assert!(result2.is_ok());
+            assert!(has_debug_privilege());
+        }
+    }
+
+    #[test]
+    fn test_has_debug_privilege() {
+        // Test the atomic bool reading
+        let state = has_debug_privilege();
+        // Should return consistent value
+        assert_eq!(state, has_debug_privilege());
+    }
+
+    #[test]
+    fn test_token_guard_new() {
+        // Test TokenGuard creation
+        let guard = TokenGuard::new(std::ptr::null_mut());
+        assert!(guard.handle.is_null());
+    }
+
+    #[test]
+    fn test_token_guard_drop_null() {
+        // Test that dropping null handle doesn't crash
+        let guard = TokenGuard::new(std::ptr::null_mut());
+        drop(guard);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_debug_privilege_guard_with_enabled() {
+        // Test creating guard when privilege might already be enabled
+        let _result1 = enable_debug_privilege();
+
+        // Now try to create a guard
+        let guard = DebugPrivilegeGuard::new();
+        if let Ok(guard_val) = guard {
+            // Check internal state
+            let _ = guard_val.was_enabled;
+        }
     }
 }

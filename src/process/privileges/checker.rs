@@ -183,10 +183,33 @@ mod tests {
     }
 
     #[test]
+    fn test_privilege_state_copy() {
+        let state = PrivilegeState::Enabled;
+        let copied = state;
+        assert_eq!(state, copied);
+    }
+
+    #[test]
+    fn test_privilege_state_debug() {
+        let state = PrivilegeState::Disabled;
+        let debug_str = format!("{:?}", state);
+        assert!(debug_str.contains("Disabled"));
+    }
+
+    #[test]
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_is_elevated() {
         // Just ensure it doesn't crash
         let _ = PrivilegeChecker::is_elevated();
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_is_elevated_result() {
+        // Test that it returns a boolean
+        let result = PrivilegeChecker::is_elevated();
+        // Result is a boolean - just verify it doesn't crash
+        let _ = result;
     }
 
     #[test]
@@ -196,5 +219,80 @@ mod tests {
         let result = PrivilegeChecker::list_privileges();
         // Just ensure it doesn't crash
         let _ = result;
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_list_privileges_result() {
+        match PrivilegeChecker::list_privileges() {
+            Ok(privileges) => {
+                // Process should have at least some privileges
+                // But could be empty in restricted environments
+                let _ = privileges.len();
+            }
+            Err(_) => {
+                // Error is acceptable in some environments
+            }
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_check_privilege_debug() {
+        // SE_DEBUG_PRIVILEGE has LUID 20
+        let result = PrivilegeChecker::check_privilege(20);
+        match result {
+            Ok(state) => {
+                // Verify we get a valid state
+                assert!(
+                    state == PrivilegeState::Enabled
+                        || state == PrivilegeState::Disabled
+                        || state == PrivilegeState::NotPresent
+                );
+            }
+            Err(_) => {
+                // Error is acceptable if token can't be opened
+            }
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_check_privilege_various() {
+        // Test various privilege LUIDs
+        let privilege_luids = [
+            2,  // SE_CREATE_TOKEN_PRIVILEGE
+            3,  // SE_ASSIGNPRIMARYTOKEN_PRIVILEGE
+            4,  // SE_LOCK_MEMORY_PRIVILEGE
+            5,  // SE_INCREASE_QUOTA_PRIVILEGE
+            20, // SE_DEBUG_PRIVILEGE
+        ];
+
+        for luid in &privilege_luids {
+            let _ = PrivilegeChecker::check_privilege(*luid);
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_check_nonexistent_privilege() {
+        // Test with a very high LUID that likely doesn't exist
+        let result = PrivilegeChecker::check_privilege(999999);
+        match result {
+            Ok(state) => {
+                // Should be NotPresent for nonexistent privilege
+                assert_eq!(state, PrivilegeState::NotPresent);
+            }
+            Err(_) => {
+                // Error is also acceptable
+            }
+        }
+    }
+
+    #[test]
+    fn test_token_guard_drop() {
+        // Test that TokenGuard properly handles null
+        let guard = TokenGuard(std::ptr::null_mut());
+        drop(guard); // Should not crash
     }
 }

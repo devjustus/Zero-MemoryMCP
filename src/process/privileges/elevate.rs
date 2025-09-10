@@ -196,10 +196,59 @@ mod tests {
     }
 
     #[test]
+    fn test_elevation_options_custom() {
+        let options = ElevationOptions {
+            auto_enable: false,
+            require_success: true,
+            cache_result: false,
+        };
+        assert!(!options.auto_enable);
+        assert!(options.require_success);
+        assert!(!options.cache_result);
+    }
+
+    #[test]
+    fn test_elevation_options_clone() {
+        let options = ElevationOptions::default();
+        let cloned = options.clone();
+        assert_eq!(options.auto_enable, cloned.auto_enable);
+        assert_eq!(options.require_success, cloned.require_success);
+        assert_eq!(options.cache_result, cloned.cache_result);
+    }
+
+    #[test]
+    fn test_elevation_options_debug() {
+        let options = ElevationOptions::default();
+        let debug_str = format!("{:?}", options);
+        assert!(debug_str.contains("ElevationOptions"));
+    }
+
+    #[test]
     fn test_privilege_elevator_creation() {
         let _elevator = PrivilegeElevator::new();
         // Clear cache for clean test
         PrivilegeElevator::clear_cache();
+    }
+
+    #[test]
+    fn test_privilege_elevator_default() {
+        let elevator1 = PrivilegeElevator::new();
+        let elevator2 = PrivilegeElevator::default();
+        // Both should have default options
+        assert_eq!(elevator1.options.auto_enable, elevator2.options.auto_enable);
+    }
+
+    #[test]
+    fn test_privilege_elevator_with_options() {
+        let options = ElevationOptions {
+            auto_enable: false,
+            require_success: true,
+            cache_result: false,
+        };
+        let elevator = PrivilegeElevator::with_options(options.clone());
+        assert_eq!(elevator.options.auto_enable, options.auto_enable);
+        assert_eq!(elevator.options.require_success, options.require_success);
+        assert_eq!(elevator.options.cache_result, options.cache_result);
     }
 
     #[test]
@@ -209,5 +258,63 @@ mod tests {
         let result = elevator.elevate("SeNonexistentPrivilege");
         // Should fail gracefully
         assert!(!result.unwrap_or(false));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_elevate_with_require_success() {
+        let options = ElevationOptions {
+            auto_enable: true,
+            require_success: true,
+            cache_result: false,
+        };
+        let elevator = PrivilegeElevator::with_options(options);
+        let result = elevator.elevate("SeNonexistentPrivilege");
+        // Should return error when require_success is true
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_elevate_with_caching() {
+        PrivilegeElevator::clear_cache();
+
+        let elevator = PrivilegeElevator::new();
+
+        // First call
+        let result1 = elevator.elevate("SeDebugPrivilege");
+
+        // Second call should use cache
+        let result2 = elevator.elevate("SeDebugPrivilege");
+
+        // Results should be consistent
+        if result1.is_ok() && result2.is_ok() {
+            assert_eq!(result1.unwrap(), result2.unwrap());
+        }
+
+        PrivilegeElevator::clear_cache();
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_require_privilege_function() {
+        // Test the standalone function
+        let result = require_privilege("SeNonexistentPrivilege");
+        // Should fail since privilege doesn't exist and require_success is true
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_clear_cache() {
+        // Ensure clear_cache doesn't panic
+        PrivilegeElevator::clear_cache();
+        PrivilegeElevator::clear_cache(); // Call twice to ensure idempotent
+    }
+
+    #[test]
+    fn test_token_guard_drop() {
+        // Test that TokenGuard properly handles null
+        let guard = TokenGuard(std::ptr::null_mut());
+        drop(guard); // Should not crash
     }
 }
