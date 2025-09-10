@@ -28,6 +28,7 @@ fn test_enable_debug_privilege() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_debug_privilege_guard() {
     // Test RAII guard creation
     let _initial_state = has_debug_privilege();
