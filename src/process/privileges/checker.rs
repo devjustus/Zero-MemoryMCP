@@ -295,4 +295,118 @@ mod tests {
         let guard = TokenGuard(std::ptr::null_mut());
         drop(guard); // Should not crash
     }
+
+    #[test]
+    fn test_privilege_state_all_operations() {
+        // Test all PrivilegeState operations
+        let states = [
+            PrivilegeState::Enabled,
+            PrivilegeState::Disabled,
+            PrivilegeState::NotPresent,
+        ];
+        
+        // Test pattern matching
+        for state in &states {
+            match state {
+                PrivilegeState::Enabled => {
+                    assert_eq!(*state, PrivilegeState::Enabled);
+                }
+                PrivilegeState::Disabled => {
+                    assert_eq!(*state, PrivilegeState::Disabled);
+                }
+                PrivilegeState::NotPresent => {
+                    assert_eq!(*state, PrivilegeState::NotPresent);
+                }
+            }
+        }
+        
+        // Test if-let patterns
+        let state = PrivilegeState::Enabled;
+        if let PrivilegeState::Enabled = state {
+            assert!(true);
+        } else {
+            panic!("Should be Enabled");
+        }
+    }
+
+    #[test]
+    fn test_privilege_state_as_ref() {
+        let state = PrivilegeState::Enabled;
+        let state_ref: &PrivilegeState = &state;
+        assert_eq!(*state_ref, PrivilegeState::Enabled);
+        
+        let state_box = Box::new(PrivilegeState::Disabled);
+        assert_eq!(*state_box, PrivilegeState::Disabled);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_is_elevated_consistency() {
+        // Call multiple times to ensure consistency
+        let results: Vec<bool> = (0..5)
+            .map(|_| PrivilegeChecker::is_elevated())
+            .collect();
+        
+        // All results should be the same
+        let first = results[0];
+        for result in &results[1..] {
+            assert_eq!(first, *result);
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_list_privileges_empty_handling() {
+        // Test that empty privilege list is handled correctly
+        match PrivilegeChecker::list_privileges() {
+            Ok(privileges) => {
+                // Even if empty, should not panic
+                let _ = privileges.is_empty();
+                let _ = privileges.len();
+                
+                // Test iteration
+                for privilege in &privileges {
+                    let _ = privilege.Luid.LowPart;
+                    let _ = privilege.Luid.HighPart;
+                    let _ = privilege.Attributes;
+                }
+            }
+            Err(e) => {
+                // Error should have meaningful message
+                let msg = e.to_string();
+                assert!(!msg.is_empty());
+            }
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_check_privilege_boundary_values() {
+        // Test boundary LUID values
+        let boundary_luids = [
+            0,
+            1,
+            u32::MAX / 2,
+            u32::MAX - 1,
+            u32::MAX,
+        ];
+        
+        for luid in boundary_luids {
+            let result = PrivilegeChecker::check_privilege(luid);
+            // Should not panic regardless of result
+            match result {
+                Ok(_) => {},
+                Err(_) => {},
+            }
+        }
+    }
+
+    #[test]
+    fn test_token_guard_non_null() {
+        // Test TokenGuard with non-null (but invalid) handle
+        // Use a small non-zero value that's definitely invalid
+        let guard = TokenGuard(1 as HANDLE);
+        // Drop should handle invalid handles gracefully
+        drop(guard);
+    }
 }

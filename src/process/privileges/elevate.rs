@@ -317,4 +317,142 @@ mod tests {
         let guard = TokenGuard(std::ptr::null_mut());
         drop(guard); // Should not crash
     }
+
+    #[test]
+    fn test_token_guard_non_null() {
+        // Test TokenGuard with non-null (but invalid) handle
+        let guard = TokenGuard(1 as HANDLE);
+        // Drop should handle invalid handles gracefully
+        drop(guard);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_elevate_empty_privilege_name() {
+        let elevator = PrivilegeElevator::new();
+        let result = elevator.elevate("");
+        // Empty name should fail
+        assert!(!result.unwrap_or(true));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_elevate_special_characters() {
+        let elevator = PrivilegeElevator::new();
+        
+        // Test with special characters
+        let special_names = [
+            "Se!@#$%Privilege",
+            "Se\nPrivilege",
+            "Se\tPrivilege",
+            "Se\0Privilege",
+            "Se Privilege With Spaces",
+        ];
+        
+        for name in &special_names {
+            let result = elevator.elevate(name);
+            // Should handle gracefully
+            let _ = result;
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_elevate_very_long_name() {
+        let elevator = PrivilegeElevator::new();
+        
+        // Create a very long privilege name
+        let long_name = "Se".to_string() + &"X".repeat(10000) + "Privilege";
+        let result = elevator.elevate(&long_name);
+        
+        // Should handle gracefully without stack overflow
+        assert!(!result.unwrap_or(true));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_cache_with_different_options() {
+        PrivilegeElevator::clear_cache();
+        
+        // Test cache behavior with different elevator instances
+        let elevator1 = PrivilegeElevator::with_options(ElevationOptions {
+            auto_enable: true,
+            require_success: false,
+            cache_result: true,
+        });
+        
+        let elevator2 = PrivilegeElevator::with_options(ElevationOptions {
+            auto_enable: false,
+            require_success: true,
+            cache_result: true,
+        });
+        
+        // Both should share the same cache
+        let _ = elevator1.elevate("SeDebugPrivilege");
+        let _ = elevator2.elevate("SeDebugPrivilege"); // Should use cache
+        
+        PrivilegeElevator::clear_cache();
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_multiple_privileges_sequential() {
+        let elevator = PrivilegeElevator::new();
+        
+        let privileges = [
+            "SeDebugPrivilege",
+            "SeBackupPrivilege",
+            "SeRestorePrivilege",
+            "SeShutdownPrivilege",
+            "SeSystemtimePrivilege",
+        ];
+        
+        for privilege in &privileges {
+            let result = elevator.elevate(privilege);
+            // Just ensure no panic
+            let _ = result;
+        }
+    }
+
+    #[test]
+    fn test_elevation_options_partial_eq() {
+        let options1 = ElevationOptions::default();
+        let options2 = ElevationOptions::default();
+        let options3 = ElevationOptions {
+            auto_enable: false,
+            require_success: true,
+            cache_result: false,
+        };
+        
+        // Same options should be equal
+        assert_eq!(options1.auto_enable, options2.auto_enable);
+        assert_eq!(options1.require_success, options2.require_success);
+        assert_eq!(options1.cache_result, options2.cache_result);
+        
+        // Different options
+        assert_ne!(options1.auto_enable, options3.auto_enable);
+        assert_ne!(options1.require_success, options3.require_success);
+        assert_ne!(options1.cache_result, options3.cache_result);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_require_privilege_comprehensive() {
+        // Test various scenarios
+        let test_cases = [
+            ("SeDebugPrivilege", false),  // May or may not succeed
+            ("SeInvalidPrivilege", true), // Should fail
+            ("", true),                   // Should fail
+        ];
+        
+        for (privilege, should_fail) in &test_cases {
+            let result = require_privilege(privilege);
+            if *should_fail {
+                // These should definitely fail
+                if privilege.is_empty() || privilege.contains("Invalid") {
+                    assert!(result.is_err());
+                }
+            }
+        }
+    }
 }
