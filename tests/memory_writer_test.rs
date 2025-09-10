@@ -46,8 +46,12 @@ mod basic_writer_tests {
             .write(Address::new(0x1000), 0x123456789ABCDEFu64)
             .is_err());
         assert!(writer.write(Address::new(0x1000), -42i32).is_err());
-        assert!(writer.write(Address::new(0x1000), std::f32::consts::PI).is_err());
-        assert!(writer.write(Address::new(0x1000), std::f64::consts::E).is_err());
+        assert!(writer
+            .write(Address::new(0x1000), std::f32::consts::PI)
+            .is_err());
+        assert!(writer
+            .write(Address::new(0x1000), std::f64::consts::E)
+            .is_err());
     }
 
     #[test]

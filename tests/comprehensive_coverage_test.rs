@@ -3,8 +3,8 @@
 use memory_mcp::core::types::{Address, MemoryError, MemoryValue, ValueType};
 use memory_mcp::memory::{
     writer::{BatchWrite, ExtendedWrite, MemoryCopy, MemoryWrite},
-    BasicMemoryWriter, ComparisonType, MemoryOperations, MemoryReader, MemoryScanner,
-    ScanOptions, ScanPattern,
+    BasicMemoryWriter, ComparisonType, MemoryOperations, MemoryReader, MemoryScanner, ScanOptions,
+    ScanPattern,
 };
 use memory_mcp::process::ProcessHandle;
 use std::collections::HashMap;
