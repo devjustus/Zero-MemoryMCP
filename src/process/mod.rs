@@ -7,6 +7,7 @@ pub mod enumerator;
 pub mod handle;
 pub mod info;
 pub mod manager;
+pub mod privileges;
 
 pub use enumerator::{enumerate_processes, ProcessEnumerator};
 pub use handle::ProcessHandle;
@@ -14,23 +15,21 @@ pub use info::{ProcessArchitecture, ProcessInfo};
 pub use manager::{
     AttachOptions, AttachmentGuard, DetachOptions, ProcessAttacher, ProcessDetacher,
 };
+pub use privileges::{
+    enable_debug_privilege, has_debug_privilege, require_privilege, DebugPrivilegeGuard,
+    ElevationOptions, PrivilegeChecker, PrivilegeElevator, PrivilegeState,
+};
 
-use crate::core::types::{MemoryError, MemoryResult};
+use crate::core::types::MemoryResult;
 
 /// Check if we have debug privileges
 pub fn has_debug_privileges() -> bool {
-    // This would require checking token privileges
-    // For now, assume we need to request them
-    false
+    has_debug_privilege()
 }
 
 /// Request debug privileges for the current process
 pub fn enable_debug_privileges() -> MemoryResult<()> {
-    // This will be implemented when we add privilege management
-    // For now, return an error indicating it's not implemented
-    Err(MemoryError::PermissionDenied(
-        "Debug privilege management not yet implemented".to_string(),
-    ))
+    enable_debug_privilege()
 }
 
 #[cfg(test)]
@@ -39,20 +38,16 @@ mod tests {
 
     #[test]
     fn test_has_debug_privileges() {
-        // Should return false by default
-        assert!(!has_debug_privileges());
+        // Check that the function exists and doesn't panic
+        let _ = has_debug_privileges();
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_enable_debug_privileges() {
-        // Should return not implemented error for now
+        // This might fail without admin rights, but should not panic
         let result = enable_debug_privileges();
-        assert!(result.is_err());
-        match result.unwrap_err() {
-            MemoryError::PermissionDenied(msg) => {
-                assert!(msg.contains("not yet implemented"));
-            }
-            _ => panic!("Expected PermissionDenied error"),
-        }
+        // Just ensure it doesn't panic - the result depends on privileges
+        let _ = result;
     }
 }

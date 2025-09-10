@@ -24,6 +24,7 @@ fn test_address_and_scan_result_integration() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "SystemTime operations not fully supported in Miri")]
 fn test_scan_session_workflow() {
     let mut session = ScanSession::new(
         "integration-test".to_string(),
@@ -248,6 +249,7 @@ fn test_value_type_matching() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "SystemTime operations not fully supported in Miri")]
 fn test_complete_scan_workflow() {
     let mut session = ScanSession::new(
         "complete-workflow".to_string(),

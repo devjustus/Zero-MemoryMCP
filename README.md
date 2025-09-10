@@ -1,4 +1,4 @@
-[![codecov](https://codecov.io/github/devjustus/Zero-MemoryMCP/graph/badge.svg?token=V0P64XTN39)](https://codecov.io/github/devjustus/Zero-MemoryMCP)
+[![codecov](https://codecov.io/github/devjustus/Zero-MemoryMCP/graph/badge.svg?token=V0P64XTN39)](https://codecov.io/github/devjustus/Zero-MemoryMCP) [![Release](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/release.yml/badge.svg)](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/release.yml) [![Nightly Build](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/nightly.yml/badge.svg)](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/nightly.yml) [![Security](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/devjustus/Zero-MemoryMCP/actions/workflows/security.yml)
 
 # Memory-MCP 🧠
 

@@ -37,7 +37,9 @@ winapi = { version = "0.3", features = [
     "minwindef",
     "basetsd",
     "ntdef",
-    "errhandlingapi"
+    "errhandlingapi",
+    "securitybaseapi",
+    "winbase"
 ]}
 
 # Async runtime
@@ -64,6 +66,9 @@ hex = "0.4"
 # Parallel processing
 rayon = "1.8"
 num_cpus = "1.16"
+
+# Static initialization
+lazy_static = "1.4"
 
 # MCP protocol (placeholder - replace with actual MCP crate when available)
 # TODO: Replace with modern JSON-RPC implementation
