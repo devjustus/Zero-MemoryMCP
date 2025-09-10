@@ -322,6 +322,7 @@ fn test_privilege_checker_list_comprehensive() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_elevation_error_handling() {
     // Test with options that require success
     let elevator = PrivilegeElevator::with_options(ElevationOptions {

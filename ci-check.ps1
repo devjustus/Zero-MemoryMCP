@@ -1,101 +1,130 @@
 #!/usr/bin/env pwsh
-# Local CI validation script - Run before pushing!
-# Usage: .\ci-check.ps1
+# CI/CD Pipeline Local Test Script - Mirrors GitHub Actions Security Workflow
+# CRITICAL: This includes Miri tests which have been failing
 
-Write-Host "🔍 Running Complete CI Validation Locally" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "=== CI/CD Pipeline Local Validation ===" -ForegroundColor Cyan
+Write-Host "Mirroring GitHub Actions Security Workflow" -ForegroundColor Gray
+Write-Host ""
 
 $failed = $false
+$startTime = Get-Date
 
 # 1. Format Check
-Write-Host "`n📝 Checking Code Formatting..." -ForegroundColor Yellow
+Write-Host "[1/7] Checking Code Formatting..." -ForegroundColor Yellow
 cargo fmt --all -- --check
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Formatting issues found! Run: cargo fmt --all" -ForegroundColor Red
+    Write-Host "  ❌ Format check failed! Run: cargo fmt --all" -ForegroundColor Red
     $failed = $true
 } else {
-    Write-Host "✅ Formatting OK" -ForegroundColor Green
+    Write-Host "  ✅ Format check passed" -ForegroundColor Green
 }
 
-# 2. Clippy (with CI flags)
-Write-Host "`n🔍 Running Clippy with CI settings..." -ForegroundColor Yellow
+# 2. Clippy Check
+Write-Host "`n[2/7] Running Clippy..." -ForegroundColor Yellow
 cargo clippy --all-targets --all-features -- -D warnings
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Clippy warnings found!" -ForegroundColor Red
+    Write-Host "  ❌ Clippy check failed!" -ForegroundColor Red
     $failed = $true
 } else {
-    Write-Host "✅ Clippy OK" -ForegroundColor Green
+    Write-Host "  ✅ Clippy check passed" -ForegroundColor Green
 }
 
 # 3. Build Check
-Write-Host "`n🔨 Building project..." -ForegroundColor Yellow
+Write-Host "`n[3/7] Building Release..." -ForegroundColor Yellow
 cargo build --release
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Build failed!" -ForegroundColor Red
+    Write-Host "  ❌ Build failed!" -ForegroundColor Red
     $failed = $true
 } else {
-    Write-Host "✅ Build OK" -ForegroundColor Green
+    Write-Host "  ✅ Build successful" -ForegroundColor Green
 }
 
 # 4. Test Suite
-Write-Host "`n🧪 Running all tests..." -ForegroundColor Yellow
+Write-Host "`n[4/7] Running Tests..." -ForegroundColor Yellow
 cargo test --all --no-fail-fast
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Tests failed!" -ForegroundColor Red
+    Write-Host "  ❌ Tests failed!" -ForegroundColor Red
     $failed = $true
 } else {
-    Write-Host "✅ Tests OK" -ForegroundColor Green
+    Write-Host "  ✅ All tests passed" -ForegroundColor Green
 }
 
-# 5. Doc Check
-Write-Host "`n📚 Checking documentation..." -ForegroundColor Yellow
+# 5. Documentation
+Write-Host "`n[5/7] Building Documentation..." -ForegroundColor Yellow
 cargo doc --no-deps --document-private-items
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Documentation issues!" -ForegroundColor Red
+    Write-Host "  ❌ Documentation build failed!" -ForegroundColor Red
     $failed = $true
 } else {
-    Write-Host "✅ Documentation OK" -ForegroundColor Green
+    Write-Host "  ✅ Documentation built" -ForegroundColor Green
 }
 
-# 6. Security Audit (if available)
-Write-Host "`n🔒 Running security audit..." -ForegroundColor Yellow
-cargo audit 2>$null
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Security audit OK" -ForegroundColor Green
+# 6. CRITICAL: Miri Memory Safety Check
+Write-Host "`n[6/7] Running Miri Memory Safety Check..." -ForegroundColor Yellow
+Write-Host "  ⚠️  THIS IS THE TEST FAILING IN CI!" -ForegroundColor Magenta
+
+# Install Miri if needed
+$miriCheck = cargo +nightly miri --version 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Installing Miri..." -ForegroundColor Gray
+    rustup +nightly component add miri
+}
+
+# Run Miri and capture output
+$miriOutput = cargo +nightly miri test 2>&1 | Out-String
+$miriExitCode = $LASTEXITCODE
+
+# Check for actual errors (not test names containing "error")
+if ($miriExitCode -ne 0) {
+    Write-Host "  ❌ Miri test failed!" -ForegroundColor Red
+    
+    # Extract actual error lines
+    $errorLines = $miriOutput -split "`n" | Where-Object { 
+        $_ -match "^error:" -or 
+        $_ -match "abnormal termination" -or 
+        $_ -match "test failed, to rerun"
+    }
+    
+    if ($errorLines.Count -gt 0) {
+        Write-Host "  Errors:" -ForegroundColor Red
+        foreach ($line in $errorLines) {
+            Write-Host "    $line" -ForegroundColor Red
+        }
+    }
+    $failed = $true
 } else {
-    Write-Host "Warning: Security audit not available or found issues" -ForegroundColor Yellow
+    Write-Host "  ✅ Miri memory safety check passed" -ForegroundColor Green
 }
 
-# 7. Check for common issues
-Write-Host "`n🔎 Checking for common CI issues..." -ForegroundColor Yellow
-
-# Check for println! in non-test code
-$printlns = Get-ChildItem -Path src -Recurse -Filter "*.rs" | Select-String -Pattern "println!" -SimpleMatch
-if ($printlns) {
-    Write-Host "Warning: Found println! in source code (should use log crate)" -ForegroundColor Yellow
-    $printlns | ForEach-Object { Write-Host "   $_" }
+# 7. Optional Security Audit
+Write-Host "`n[7/7] Security Audit..." -ForegroundColor Yellow
+$auditCheck = cargo audit --version 2>$null
+if ($LASTEXITCODE -eq 0) {
+    cargo audit 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  ⚠️  Security vulnerabilities found (non-blocking)" -ForegroundColor Yellow
+    } else {
+        Write-Host "  ✅ No vulnerabilities" -ForegroundColor Green
+    }
+} else {
+    Write-Host "  ⏭️  Skipped (cargo-audit not installed)" -ForegroundColor Gray
 }
 
-# Check for unwrap() in non-test code
-$unwraps = Get-ChildItem -Path src -Recurse -Filter "*.rs" | Select-String -Pattern ".unwrap" -SimpleMatch
-if ($unwraps) {
-    Write-Host "Warning: Found unwrap in source code - use '?' or 'expect' instead" -ForegroundColor Yellow
-    $unwraps | ForEach-Object { Write-Host "   $_" }
-}
+# Summary
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+$duration = (Get-Date) - $startTime
+Write-Host "Duration: $($duration.ToString('mm\:ss'))" -ForegroundColor Gray
 
-# Check for TODO/FIXME
-$todos = Get-ChildItem -Path src -Recurse -Filter "*.rs" | Select-String -Pattern "TODO|FIXME|HACK" -SimpleMatch
-if ($todos) {
-    Write-Host "Warning: Found TODO/FIXME/HACK comments:" -ForegroundColor Yellow
-    $todos | ForEach-Object { Write-Host "   $_" }
-}
-
-Write-Host "`n========================================" -ForegroundColor Cyan
 if ($failed) {
-    Write-Host "❌ CI checks FAILED - Fix issues before pushing!" -ForegroundColor Red
+    Write-Host "❌ PIPELINE FAILED!" -ForegroundColor Red
+    Write-Host "GitHub Actions will fail if you push now." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "To debug Miri issues specifically:" -ForegroundColor Cyan
+    Write-Host "  cargo +nightly miri test --lib 2>&1 | Select-String -Pattern 'error:' -Context 5" -ForegroundColor Gray
     exit 1
 } else {
-    Write-Host "✅ All CI checks PASSED - Safe to push!" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Tip: Run git push to update your PR" -ForegroundColor Cyan
+    Write-Host "✅ ALL CHECKS PASSED!" -ForegroundColor Green
+    Write-Host "Safe to push to GitHub." -ForegroundColor Green
+    exit 0
 }
