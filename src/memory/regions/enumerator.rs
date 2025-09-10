@@ -236,7 +236,7 @@ mod tests {
         // Limit enumeration to avoid timeout in CI
         let handle = ProcessHandle::open_for_read(std::process::id()).unwrap();
         let mut enumerator = RegionEnumerator::new(handle);
-        
+
         // Only enumerate first 10 regions to avoid timeout
         let mut regions = Vec::new();
         for _ in 0..10 {
@@ -246,7 +246,7 @@ mod tests {
                 break;
             }
         }
-        
+
         assert!(
             !regions.is_empty(),
             "Should find at least one memory region"
