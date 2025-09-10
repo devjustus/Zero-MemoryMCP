@@ -13,7 +13,7 @@ fn get_test_handle() -> ProcessHandle {
     {
         // Return a mock handle for Miri testing
         // This handle won't work for actual operations but allows tests to compile
-        ProcessHandle::new(std::ptr::null_mut(), 0)
+        ProcessHandle::from_raw_handle(std::ptr::null_mut(), 0)
     }
     #[cfg(not(miri))]
     {
