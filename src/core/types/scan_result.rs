@@ -189,6 +189,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_scan_session_creation() {
         let session = ScanSession::new("test-session".to_string(), ScanType::Exact, ValueType::U32);
 
@@ -202,6 +203,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_scan_session_add_results() {
         let mut session =
             ScanSession::new("session-2".to_string(), ScanType::Unknown, ValueType::I64);
@@ -223,6 +225,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_scan_session_filter_results() {
         let mut session = ScanSession::new(
             "filter-session".to_string(),
@@ -284,6 +287,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_serialization() {
         let result = ScanResult::new(Address::new(0x5000), MemoryValue::U8(255));
         let json = serde_json::to_string(&result).unwrap();
@@ -304,6 +308,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_clone_and_debug() {
         let result = ScanResult::new(Address::new(0x6000), MemoryValue::F64(std::f64::consts::E));
         let cloned = result.clone();

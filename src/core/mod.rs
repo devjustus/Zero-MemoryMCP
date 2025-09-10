@@ -92,6 +92,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_types_module_accessible() {
         // Test that types module is publicly accessible
         use crate::core::types::{

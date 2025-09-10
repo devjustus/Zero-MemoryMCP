@@ -243,6 +243,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "File system operations not supported under Miri")]
     fn test_load_missing_file() {
         let loader = ConfigLoader::new("nonexistent.toml");
         let result = loader.load();
@@ -251,6 +252,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "File system operations not supported under Miri")]
     fn test_load_or_default() {
         let loader = ConfigLoader::new("nonexistent.toml");
         let config = loader.load_or_default();
@@ -300,6 +302,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "File system operations not supported under Miri")]
     fn test_load_config_function() {
         // This will use the default path "config.toml" which doesn't exist
         let result = load_config();

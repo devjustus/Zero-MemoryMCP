@@ -57,11 +57,13 @@ impl Address {
     }
 
     /// Returns the address as a pointer
+    #[allow(clippy::useless_transmute)]
     pub const fn as_ptr<T>(&self) -> *const T {
         self.0 as *const T
     }
 
     /// Returns the address as a mutable pointer
+    #[allow(clippy::useless_transmute)]
     pub const fn as_mut_ptr<T>(&self) -> *mut T {
         self.0 as *mut T
     }
