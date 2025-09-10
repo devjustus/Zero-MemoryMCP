@@ -7,6 +7,7 @@ use memory_mcp::process::{
 use std::process;
 
 #[test]
+#[cfg_attr(miri, ignore = "FFI not supported in Miri")]
 fn test_module_enumerator_with_current_process() {
     let handle =
         ProcessHandle::open_for_read(process::id()).expect("Failed to open current process");
