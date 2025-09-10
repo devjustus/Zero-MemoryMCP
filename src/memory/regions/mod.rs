@@ -97,13 +97,14 @@ mod tests {
         let criteria = FilterCriteria::new()
             .with_state(RegionState::Committed)
             .readable();
-        
+
         let result = get_filtered_regions(criteria);
         assert!(result.is_ok());
-        
+
         // All returned regions should be committed and readable
         if let Ok(regions) = result {
-            for region in regions.iter().take(5) { // Check first 5 to avoid timeout
+            for region in regions.iter().take(5) {
+                // Check first 5 to avoid timeout
                 assert_eq!(region.state, RegionState::Committed);
                 assert!(region.is_readable());
             }

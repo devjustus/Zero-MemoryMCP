@@ -278,7 +278,7 @@ mod tests {
         assert!(region.contains(Address::new(0x1000))); // Start
         assert!(region.contains(Address::new(0x1500))); // Middle
         assert!(region.contains(Address::new(0x2FFF))); // Just before end
-        
+
         // Test addresses outside the region
         assert!(!region.contains(Address::new(0x0FFF))); // Before start
         assert!(!region.contains(Address::new(0x3000))); // At end (exclusive)
@@ -325,7 +325,7 @@ mod tests {
             allocation_protection: 0x04,
             allocation_base: Address::new(0x1000),
         };
-        
+
         assert!(guarded.is_guarded());
         assert!(!guarded.is_readable()); // Guard pages are not readable
     }
@@ -335,11 +335,11 @@ mod tests {
     fn test_enumerator_set_addresses() {
         let handle = ProcessHandle::open_for_read(std::process::id()).unwrap();
         let mut enumerator = RegionEnumerator::new(handle);
-        
+
         // Set custom start and max addresses
         enumerator.set_start_address(Address::new(0x10000));
         enumerator.set_max_address(Address::new(0x20000));
-        
+
         // Try to get one region (may be none in this range)
         let _ = enumerator.next();
         // Test passes if no panic
@@ -350,7 +350,7 @@ mod tests {
     fn test_enumerate_regions_function() {
         // Test the standalone function
         let result = enumerate_regions();
-        
+
         // Should succeed (though may return empty on some systems)
         assert!(result.is_ok());
     }

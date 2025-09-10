@@ -296,12 +296,12 @@ mod tests {
 
         let image_filter = presets::image_regions();
         assert_eq!(image_filter.region_type, Some(RegionType::Image));
-        
+
         let stack_filter = presets::stack_regions();
         assert!(stack_filter.readable_only);
         assert!(stack_filter.writable_only);
         assert_eq!(stack_filter.region_type, Some(RegionType::Private));
-        
+
         let large_filter = presets::large_regions();
         assert_eq!(large_filter.min_size, Some(1024 * 1024));
         assert_eq!(large_filter.state, Some(RegionState::Committed));
@@ -363,14 +363,12 @@ mod tests {
 
         // Region is at 0x2000-0x3000
         let filter1 = RegionFilter::new(
-            FilterCriteria::new()
-                .with_address_range(Address::new(0x1000), Address::new(0x4000)),
+            FilterCriteria::new().with_address_range(Address::new(0x1000), Address::new(0x4000)),
         );
         assert!(filter1.matches(&region));
 
         let filter2 = RegionFilter::new(
-            FilterCriteria::new()
-                .with_address_range(Address::new(0x3000), Address::new(0x5000)),
+            FilterCriteria::new().with_address_range(Address::new(0x3000), Address::new(0x5000)),
         );
         assert!(!filter2.matches(&region));
     }
@@ -419,9 +417,7 @@ mod tests {
             allocation_base: Address::new(0x1000),
         };
 
-        let filter_exclude = RegionFilter::new(
-            FilterCriteria::new().exclude_guarded_pages(),
-        );
+        let filter_exclude = RegionFilter::new(FilterCriteria::new().exclude_guarded_pages());
         assert!(!filter_exclude.matches(&guarded_region));
 
         let filter_include = RegionFilter::new(FilterCriteria::new());
@@ -453,7 +449,7 @@ mod tests {
 
         let filter = RegionFilter::new(FilterCriteria::new().executable());
         let filtered = filter.apply(&regions);
-        
+
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].base_address, Address::new(0x1000));
     }

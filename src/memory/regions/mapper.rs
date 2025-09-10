@@ -403,7 +403,8 @@ mod tests {
         let mapper = MemoryMapper::new(handle);
 
         // Create shared memory
-        let result = mapper.create_shared_memory("TestSharedMemory123", 4096, MappingAccess::ReadWrite);
+        let result =
+            mapper.create_shared_memory("TestSharedMemory123", 4096, MappingAccess::ReadWrite);
         // May fail if already exists, but should not panic
         let _ = result;
     }
@@ -421,7 +422,7 @@ mod tests {
             offset: 0,
             preferred_address: None,
         };
-        
+
         let allocated = mapper.allocate_memory(4096, options);
         assert!(allocated.is_ok());
 
@@ -457,7 +458,7 @@ mod tests {
         assert_eq!(options.access, MappingAccess::ReadWrite);
         assert_eq!(options.preferred_address, Some(Address::new(0x10000)));
         assert_eq!(options.offset, 4096);
-        
+
         // Test default
         let default = MappingOptions::default();
         assert_eq!(default.access, MappingAccess::ReadWrite);
@@ -474,7 +475,7 @@ mod tests {
         assert_eq!(MappingAccess::ReadWriteExecute.to_page_protection(), 0x40);
         assert_eq!(MappingAccess::CopyOnWrite.to_page_protection(), 0x08);
 
-        // Test file map access conversions  
+        // Test file map access conversions
         assert_eq!(MappingAccess::ReadOnly.to_file_map_access(), 0x04);
         assert_eq!(MappingAccess::ReadWrite.to_file_map_access(), 0x02);
         assert_eq!(MappingAccess::ReadWriteExecute.to_file_map_access(), 0x20);

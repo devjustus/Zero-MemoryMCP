@@ -439,7 +439,10 @@ mod tests {
                 assert!(result.is_ok());
 
                 let change = result.unwrap();
-                assert_eq!(change.new_protection.raw(), ProtectionFlags::PAGE_EXECUTE_READWRITE);
+                assert_eq!(
+                    change.new_protection.raw(),
+                    ProtectionFlags::PAGE_EXECUTE_READWRITE
+                );
 
                 VirtualFree(mem, 0, MEM_RELEASE);
             }
@@ -481,7 +484,7 @@ mod tests {
     fn test_protection_flags_with_modifiers() {
         let flags = ProtectionFlags::read_write();
         let with_no_cache = flags.with_no_cache();
-        
+
         assert!(with_no_cache.is_no_cache());
         assert!(with_no_cache.is_readable());
         assert!(with_no_cache.is_writable());
@@ -512,13 +515,13 @@ mod tests {
         let manager = ProtectionManager::new(handle);
 
         // Test with zero size
-        let result = manager.change_protection(
-            Address::new(0x1000),
-            0,
-            ProtectionFlags::read_write(),
-        );
-        
+        let result =
+            manager.change_protection(Address::new(0x1000), 0, ProtectionFlags::read_write());
+
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), MemoryError::InvalidValueType(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            MemoryError::InvalidValueType(_)
+        ));
     }
 }
