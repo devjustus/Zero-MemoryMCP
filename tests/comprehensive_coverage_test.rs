@@ -12,7 +12,7 @@ use std::collections::HashMap;
 fn get_test_handle() -> ProcessHandle {
     #[cfg(miri)]
     {
-        ProcessHandle::new(std::ptr::null_mut(), 0)
+        ProcessHandle::from_raw_handle(std::ptr::null_mut(), 0)
     }
     #[cfg(not(miri))]
     {
