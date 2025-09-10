@@ -360,6 +360,40 @@ RUST_LOG=debug cargo run
 cargo watch -x run
 ```
 
+### 🚨 IMPORTANT: Before Committing
+
+**Always run the CI validation script before committing to avoid pipeline failures:**
+
+```bash
+# Windows:
+.\ci-check.bat
+
+# Linux/Mac:
+./ci-check.sh
+```
+
+This script runs ALL the same checks as the CI pipeline:
+- ✅ Code formatting (`cargo fmt`)
+- ✅ Clippy linting with CI flags (`cargo clippy -- -D warnings`)
+- ✅ All tests (`cargo test --all`)
+- ✅ Documentation build (`cargo doc`)
+- ✅ Security audit (`cargo audit`)
+
+**Optional: Setup pre-commit hooks for automatic validation:**
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+### Quick Validation Commands
+If you prefer running checks manually:
+```bash
+# The essential checks - run these ALWAYS before committing:
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all --no-fail-fast
+```
+
 ## 📊 Benchmarks
 
 | Operation | Time | Memory |

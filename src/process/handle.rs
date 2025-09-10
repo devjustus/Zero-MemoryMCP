@@ -47,6 +47,26 @@ pub struct ProcessHandle {
 }
 
 impl ProcessHandle {
+    /// Create a new ProcessHandle from raw handle
+    ///
+    /// # Safety
+    /// This function is intended for testing purposes only.
+    /// The handle must be valid or null.
+    #[doc(hidden)]
+    pub fn from_raw_handle(handle: *mut winapi::ctypes::c_void, pid: u32) -> Self {
+        ProcessHandle {
+            handle: Handle::new(handle),
+            pid,
+            access: ProcessAccess::QUERY_INFORMATION,
+        }
+    }
+
+    /// Create a new ProcessHandle (for internal testing only)
+    #[cfg(test)]
+    pub fn new(handle: *mut winapi::ctypes::c_void, pid: u32) -> Self {
+        Self::from_raw_handle(handle, pid)
+    }
+
     /// Open a process with specified access rights
     pub fn open(pid: u32, access: ProcessAccess) -> MemoryResult<Self> {
         let raw_handle = kernel32::open_process(pid, access.value())?;
@@ -151,6 +171,12 @@ impl fmt::Display for ProcessHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_process_handle_new() {
+        let handle = ProcessHandle::new(std::ptr::null_mut(), 1234);
+        assert_eq!(handle.pid(), 1234);
+    }
 
     #[test]
     fn test_process_access_constants() {

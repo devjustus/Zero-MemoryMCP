@@ -47,6 +47,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "File system operations not supported under Miri")]
     fn test_load_config_export() {
         // This will return default config since file doesn't exist
         let result = load_config();

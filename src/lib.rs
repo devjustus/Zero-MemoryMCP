@@ -5,6 +5,7 @@
 
 pub mod config;
 pub mod core;
+pub mod memory;
 pub mod process;
 pub mod windows;
 
@@ -137,6 +138,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "SystemTime operations not supported under Miri")]
     fn test_all_types_module_exports() {
         // Import from types module through core
         use crate::core::types::{RegionInfo, ScanResult, ScanSession, ScanType};
