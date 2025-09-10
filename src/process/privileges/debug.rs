@@ -225,7 +225,7 @@ mod tests {
     fn test_debug_privilege_comprehensive() {
         // Test all paths in enable_debug_privilege
         let initial = has_debug_privilege();
-        
+
         // Try enabling multiple times
         for _ in 0..3 {
             let result = enable_debug_privilege();
@@ -233,7 +233,7 @@ mod tests {
                 assert!(has_debug_privilege());
             }
         }
-        
+
         // State should be consistent
         let final_state = has_debug_privilege();
         if initial && !final_state {
@@ -246,17 +246,17 @@ mod tests {
     fn test_debug_privilege_guard_nested() {
         // Test nested guard creation
         let initial = has_debug_privilege();
-        
+
         {
             let guard1 = DebugPrivilegeGuard::new();
             if let Ok(g1) = guard1 {
                 let was_enabled1 = g1.was_enabled;
-                
+
                 {
                     let guard2 = DebugPrivilegeGuard::new();
                     if let Ok(g2) = guard2 {
                         let was_enabled2 = g2.was_enabled;
-                        
+
                         // Inner guard should see the state from outer guard
                         if !was_enabled1 {
                             assert!(was_enabled2 || has_debug_privilege());
@@ -264,7 +264,7 @@ mod tests {
                     }
                     // guard2 dropped
                 }
-                
+
                 // Still have guard1
                 if !was_enabled1 {
                     let _ = has_debug_privilege();
@@ -272,7 +272,7 @@ mod tests {
             }
             // guard1 dropped
         }
-        
+
         let _ = initial;
     }
 
@@ -281,11 +281,10 @@ mod tests {
     fn test_debug_privilege_guard_error_path() {
         // Test guard creation failure path
         // This test might not fail, but ensures error path doesn't panic
-        
-        let guards: Vec<Result<DebugPrivilegeGuard, _>> = (0..5)
-            .map(|_| DebugPrivilegeGuard::new())
-            .collect();
-        
+
+        let guards: Vec<Result<DebugPrivilegeGuard, _>> =
+            (0..5).map(|_| DebugPrivilegeGuard::new()).collect();
+
         for guard in guards {
             match guard {
                 Ok(g) => {
@@ -309,7 +308,7 @@ mod tests {
             TokenGuard::new(1 as HANDLE),
             TokenGuard::new(usize::MAX as HANDLE),
         ];
-        
+
         for guard in guards {
             // All should drop without panic
             drop(guard);
@@ -323,12 +322,12 @@ mod tests {
             let _guard = TokenGuard::new(std::ptr::null_mut());
             // Guard dropped at end of scope
         }
-        
+
         {
             let guard = TokenGuard::new(1 as HANDLE);
             drop(guard); // Explicit drop
         }
-        
+
         // Test moving guard
         let guard1 = TokenGuard::new(std::ptr::null_mut());
         let guard2 = guard1; // Move
@@ -339,12 +338,10 @@ mod tests {
     fn test_has_debug_privilege_atomic() {
         // Test atomic operations
         let initial = has_debug_privilege();
-        
+
         // Multiple reads should be consistent
-        let reads: Vec<bool> = (0..100)
-            .map(|_| has_debug_privilege())
-            .collect();
-        
+        let reads: Vec<bool> = (0..100).map(|_| has_debug_privilege()).collect();
+
         for read in &reads {
             assert_eq!(*read, initial);
         }
@@ -354,17 +351,15 @@ mod tests {
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_enable_debug_privilege_idempotent() {
         // Test that enabling is idempotent
-        let results: Vec<_> = (0..3)
-            .map(|_| enable_debug_privilege())
-            .collect();
-        
+        let results: Vec<_> = (0..3).map(|_| enable_debug_privilege()).collect();
+
         // If first succeeds, all should succeed
         if results[0].is_ok() {
             for result in &results[1..] {
                 assert!(result.is_ok());
             }
         }
-        
+
         // If first fails, all should fail with same error type
         if results[0].is_err() {
             for result in &results[1..] {
@@ -378,12 +373,12 @@ mod tests {
     fn test_debug_privilege_guard_drop_state() {
         // Test that guard drop doesn't change state unexpectedly
         let initial = has_debug_privilege();
-        
+
         // Create and immediately drop guard
         if let Ok(guard) = DebugPrivilegeGuard::new() {
             drop(guard);
         }
-        
+
         // State should be preserved (we don't disable on drop)
         let after_drop = has_debug_privilege();
         if !initial && after_drop {

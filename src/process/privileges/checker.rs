@@ -304,7 +304,7 @@ mod tests {
             PrivilegeState::Disabled,
             PrivilegeState::NotPresent,
         ];
-        
+
         // Test pattern matching
         for state in &states {
             match state {
@@ -319,11 +319,11 @@ mod tests {
                 }
             }
         }
-        
+
         // Test if-let patterns
         let state = PrivilegeState::Enabled;
         if let PrivilegeState::Enabled = state {
-            assert!(true);
+            // State is Enabled as expected
         } else {
             panic!("Should be Enabled");
         }
@@ -334,7 +334,7 @@ mod tests {
         let state = PrivilegeState::Enabled;
         let state_ref: &PrivilegeState = &state;
         assert_eq!(*state_ref, PrivilegeState::Enabled);
-        
+
         let state_box = Box::new(PrivilegeState::Disabled);
         assert_eq!(*state_box, PrivilegeState::Disabled);
     }
@@ -343,10 +343,8 @@ mod tests {
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_is_elevated_consistency() {
         // Call multiple times to ensure consistency
-        let results: Vec<bool> = (0..5)
-            .map(|_| PrivilegeChecker::is_elevated())
-            .collect();
-        
+        let results: Vec<bool> = (0..5).map(|_| PrivilegeChecker::is_elevated()).collect();
+
         // All results should be the same
         let first = results[0];
         for result in &results[1..] {
@@ -363,7 +361,7 @@ mod tests {
                 // Even if empty, should not panic
                 let _ = privileges.is_empty();
                 let _ = privileges.len();
-                
+
                 // Test iteration
                 for privilege in &privileges {
                     let _ = privilege.Luid.LowPart;
@@ -383,21 +381,12 @@ mod tests {
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_check_privilege_boundary_values() {
         // Test boundary LUID values
-        let boundary_luids = [
-            0,
-            1,
-            u32::MAX / 2,
-            u32::MAX - 1,
-            u32::MAX,
-        ];
-        
+        let boundary_luids = [0, 1, u32::MAX / 2, u32::MAX - 1, u32::MAX];
+
         for luid in boundary_luids {
             let result = PrivilegeChecker::check_privilege(luid);
             // Should not panic regardless of result
-            match result {
-                Ok(_) => {},
-                Err(_) => {},
-            }
+            let _ = result;
         }
     }
 
