@@ -3,10 +3,10 @@
 use memory_mcp::core::types::{Address, ValueType};
 use memory_mcp::memory::{
     writer::{BatchWrite, ExtendedWrite, MemoryCopy, MemoryWrite},
-    BasicMemoryWriter, SafeMemoryWriter, ComparisonType, MemoryOperations,
-    MemoryScanner, ScanOptions, ScanPattern,
+    BasicMemoryWriter, ComparisonType, MemoryOperations, MemoryScanner, SafeMemoryWriter,
+    ScanOptions, ScanPattern,
 };
-use memory_mcp::process::{ProcessHandle, ProcessEnumerator};
+use memory_mcp::process::{ProcessEnumerator, ProcessHandle};
 use std::collections::HashMap;
 
 /// Helper to get a test handle
@@ -17,9 +17,8 @@ fn get_test_handle() -> ProcessHandle {
     }
     #[cfg(not(miri))]
     {
-        ProcessHandle::open_for_read(std::process::id()).unwrap_or_else(|_| {
-            ProcessHandle::from_raw_handle(std::ptr::null_mut(), 0)
-        })
+        ProcessHandle::open_for_read(std::process::id())
+            .unwrap_or_else(|_| ProcessHandle::from_raw_handle(std::ptr::null_mut(), 0))
     }
 }
 
@@ -167,8 +166,12 @@ mod writer_comprehensive_coverage {
         // Test zero-sized operations
         assert!(writer.write_bytes(Address::new(0x1000), &[]).is_ok());
         assert!(writer.fill(Address::new(0x1000), 0xCC, 0).is_ok());
-        assert!(writer.copy_memory(Address::new(0x1000), Address::new(0x2000), 0).is_ok());
-        assert!(writer.swap_memory(Address::new(0x1000), Address::new(0x2000), 0).is_ok());
+        assert!(writer
+            .copy_memory(Address::new(0x1000), Address::new(0x2000), 0)
+            .is_ok());
+        assert!(writer
+            .swap_memory(Address::new(0x1000), Address::new(0x2000), 0)
+            .is_ok());
 
         // Test large operations (triggers chunking)
         let _ = writer.fill(Address::new(0x1000), 0xCC, 10000);
@@ -306,9 +309,18 @@ mod reader_comprehensive_coverage {
 
         // Test read_value with all types
         for value_type in &[
-            ValueType::U8, ValueType::U16, ValueType::U32, ValueType::U64,
-            ValueType::I8, ValueType::I16, ValueType::I32, ValueType::I64,
-            ValueType::F32, ValueType::F64, ValueType::String, ValueType::Bytes,
+            ValueType::U8,
+            ValueType::U16,
+            ValueType::U32,
+            ValueType::U64,
+            ValueType::I8,
+            ValueType::I16,
+            ValueType::I32,
+            ValueType::I64,
+            ValueType::F32,
+            ValueType::F64,
+            ValueType::String,
+            ValueType::Bytes,
         ] {
             let _ = reader.read_value(Address::new(0x1000), *value_type);
         }
@@ -362,9 +374,9 @@ mod process_coverage {
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_process_enumeration_comprehensive() {
         use memory_mcp::process::enumerator::{
-            enumerate_processes, find_processes_by_name, find_process_by_name, get_process_by_pid
+            enumerate_processes, find_process_by_name, find_processes_by_name, get_process_by_pid,
         };
-        
+
         // Test standalone functions
         let _ = find_processes_by_name("System");
         let _ = find_processes_by_name("NonExistent.exe");
@@ -375,7 +387,7 @@ mod process_coverage {
         let _ = get_process_by_pid(4);
         let _ = get_process_by_pid(std::process::id());
         let _ = get_process_by_pid(u32::MAX);
-        
+
         // Test enumerator iteration
         if let Ok(mut enumerator) = ProcessEnumerator::new() {
             for process in enumerator.by_ref().take(10) {
@@ -386,7 +398,7 @@ mod process_coverage {
                 let _ = process.is_wow64;
             }
         }
-        
+
         // Test enumerate_processes function
         if let Ok(processes) = enumerate_processes() {
             for process in processes.iter().take(5) {
@@ -415,7 +427,7 @@ mod process_coverage {
         if let Ok(handle) = ProcessHandle::open_for_read(std::process::id()) {
             assert!(handle.is_valid());
             assert_eq!(handle.pid(), std::process::id());
-            
+
             // Test memory operations
             let mut buffer = vec![0u8; 100];
             let _ = handle.read_memory(0x10000, &mut buffer);
@@ -459,7 +471,7 @@ mod process_coverage {
 
 #[cfg(test)]
 mod privileges_coverage {
-    use memory_mcp::process::{PrivilegeElevator, ElevationOptions};
+    use memory_mcp::process::{ElevationOptions, PrivilegeElevator};
 
     #[test]
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
@@ -470,13 +482,13 @@ mod privileges_coverage {
         let _ = PrivilegeChecker::is_elevated();
 
         // Test check_privilege with various LUIDs (common privilege values)
-        let _ = PrivilegeChecker::check_privilege(2);  // SE_CREATE_TOKEN_PRIVILEGE
-        let _ = PrivilegeChecker::check_privilege(3);  // SE_ASSIGNPRIMARYTOKEN_PRIVILEGE
-        let _ = PrivilegeChecker::check_privilege(4);  // SE_LOCK_MEMORY_PRIVILEGE
-        let _ = PrivilegeChecker::check_privilege(5);  // SE_INCREASE_QUOTA_PRIVILEGE
+        let _ = PrivilegeChecker::check_privilege(2); // SE_CREATE_TOKEN_PRIVILEGE
+        let _ = PrivilegeChecker::check_privilege(3); // SE_ASSIGNPRIMARYTOKEN_PRIVILEGE
+        let _ = PrivilegeChecker::check_privilege(4); // SE_LOCK_MEMORY_PRIVILEGE
+        let _ = PrivilegeChecker::check_privilege(5); // SE_INCREASE_QUOTA_PRIVILEGE
         let _ = PrivilegeChecker::check_privilege(20); // SE_DEBUG_PRIVILEGE
-        let _ = PrivilegeChecker::check_privilege(0);  // Invalid LUID
-        let _ = PrivilegeChecker::check_privilege(u32::MAX);  // Large LUID
+        let _ = PrivilegeChecker::check_privilege(0); // Invalid LUID
+        let _ = PrivilegeChecker::check_privilege(u32::MAX); // Large LUID
 
         // Test list privileges
         let _ = PrivilegeChecker::list_privileges();
@@ -511,7 +523,7 @@ mod privileges_coverage {
     #[test]
     #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_debug_privilege_functions() {
-        use memory_mcp::process::{has_debug_privilege, enable_debug_privilege};
+        use memory_mcp::process::{enable_debug_privilege, has_debug_privilege};
 
         // Test debug privilege functions
         let _ = has_debug_privilege();
@@ -565,4 +577,3 @@ mod memory_operations_coverage {
         assert_eq!(ops.reader().cache_size(), 0);
     }
 }
-
