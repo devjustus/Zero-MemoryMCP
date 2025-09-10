@@ -10,7 +10,7 @@ pub mod reader;
 pub mod scanner;
 pub mod writer;
 
-pub use reader::{MemoryReader, ReadCache};
+pub use reader::{BasicMemoryReader, MemoryReader, ReadCache, Reader, SafeMemoryReader};
 pub use scanner::{ComparisonType, MemoryScanner, ScanOptions, ScanPattern};
 pub use writer::MemoryWriter;
 
