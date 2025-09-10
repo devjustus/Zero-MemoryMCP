@@ -134,6 +134,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_debug_privilege_guard_creation() {
         // This might fail without admin rights
         let guard = DebugPrivilegeGuard::new();
