@@ -72,4 +72,41 @@ mod tests {
         assert_ne!(RegionType::Private, RegionType::Mapped);
         assert_ne!(RegionType::Mapped, RegionType::Image);
     }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_query_region() {
+        // Test the convenience function
+        let result = query_region(Address::new(0x10000));
+        // May fail depending on memory layout, but shouldn't panic
+        let _ = result;
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_get_all_regions() {
+        // Test the convenience function
+        let result = get_all_regions();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_get_filtered_regions() {
+        // Test filtering with specific criteria
+        let criteria = FilterCriteria::new()
+            .with_state(RegionState::Committed)
+            .readable();
+        
+        let result = get_filtered_regions(criteria);
+        assert!(result.is_ok());
+        
+        // All returned regions should be committed and readable
+        if let Ok(regions) = result {
+            for region in regions.iter().take(5) { // Check first 5 to avoid timeout
+                assert_eq!(region.state, RegionState::Committed);
+                assert!(region.is_readable());
+            }
+        }
+    }
 }

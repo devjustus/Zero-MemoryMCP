@@ -395,4 +395,105 @@ mod tests {
             VirtualFree(address.as_usize() as *mut _, 0, MEM_RELEASE);
         }
     }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_create_shared_memory() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mapper = MemoryMapper::new(handle);
+
+        // Create shared memory
+        let result = mapper.create_shared_memory("TestSharedMemory123", 4096, MappingAccess::ReadWrite);
+        // May fail if already exists, but should not panic
+        let _ = result;
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_allocate_memory() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mapper = MemoryMapper::new(handle);
+
+        // Allocate committed memory directly
+        let options = MappingOptions {
+            size: 4096,
+            access: MappingAccess::ReadWrite,
+            offset: 0,
+            preferred_address: None,
+        };
+        
+        let allocated = mapper.allocate_memory(4096, options);
+        assert!(allocated.is_ok());
+
+        // MappedRegion will clean up on drop
+    }
+
+    #[test]
+    fn test_mapped_region_drop() {
+        // Test that MappedRegion cleans up on drop
+        {
+            let _region = MappedRegion {
+                base_address: Address::new(0x1000),
+                size: 4096,
+                access: MappingAccess::ReadOnly,
+                mapping_handle: None,
+                is_file_mapping: false,
+            };
+            // Region should be dropped here, calling cleanup
+        }
+        // No panic means Drop implementation worked
+    }
+
+    #[test]
+    fn test_mapping_options() {
+        let options = MappingOptions {
+            size: 8192,
+            access: MappingAccess::ReadWrite,
+            preferred_address: Some(Address::new(0x10000)),
+            offset: 4096,
+        };
+
+        assert_eq!(options.size, 8192);
+        assert_eq!(options.access, MappingAccess::ReadWrite);
+        assert_eq!(options.preferred_address, Some(Address::new(0x10000)));
+        assert_eq!(options.offset, 4096);
+        
+        // Test default
+        let default = MappingOptions::default();
+        assert_eq!(default.access, MappingAccess::ReadWrite);
+        assert_eq!(default.size, 0);
+        assert_eq!(default.offset, 0);
+        assert!(default.preferred_address.is_none());
+    }
+
+    #[test]
+    fn test_mapping_access_conversions() {
+        // Test page protection conversions
+        assert_eq!(MappingAccess::ReadOnly.to_page_protection(), 0x02);
+        assert_eq!(MappingAccess::ReadWrite.to_page_protection(), 0x04);
+        assert_eq!(MappingAccess::ReadWriteExecute.to_page_protection(), 0x40);
+        assert_eq!(MappingAccess::CopyOnWrite.to_page_protection(), 0x08);
+
+        // Test file map access conversions  
+        assert_eq!(MappingAccess::ReadOnly.to_file_map_access(), 0x04);
+        assert_eq!(MappingAccess::ReadWrite.to_file_map_access(), 0x02);
+        assert_eq!(MappingAccess::ReadWriteExecute.to_file_map_access(), 0x20);
+        assert_eq!(MappingAccess::CopyOnWrite.to_file_map_access(), 0x01);
+    }
+
+    #[test]
+    fn test_mapped_region_fields() {
+        let region = MappedRegion {
+            base_address: Address::new(0x1000),
+            size: 4096,
+            access: MappingAccess::ReadWrite,
+            mapping_handle: None,
+            is_file_mapping: false,
+        };
+
+        assert_eq!(region.base_address, Address::new(0x1000));
+        assert_eq!(region.size, 4096);
+        assert_eq!(region.access, MappingAccess::ReadWrite);
+        assert!(!region.is_file_mapping);
+    }
 }

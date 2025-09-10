@@ -380,4 +380,145 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_unprotect_for_operation() {
+        use std::ptr;
+        use winapi::um::memoryapi::{VirtualAlloc, VirtualFree};
+        use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE};
+
+        unsafe {
+            let mem = VirtualAlloc(
+                ptr::null_mut(),
+                4096,
+                MEM_COMMIT | MEM_RESERVE,
+                ProtectionFlags::PAGE_READONLY,
+            );
+
+            if !mem.is_null() {
+                let address = Address::new(mem as usize);
+                let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+                let manager = ProtectionManager::new(handle);
+
+                // Temporarily make writable for operation
+                let result = manager.unprotect_for_operation(address, 4096, || {
+                    // Simulate some operation
+                    Ok(42)
+                });
+
+                assert!(result.is_ok());
+                assert_eq!(result.unwrap(), 42);
+
+                VirtualFree(mem, 0, MEM_RELEASE);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_make_executable() {
+        use std::ptr;
+        use winapi::um::memoryapi::{VirtualAlloc, VirtualFree};
+        use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE};
+
+        unsafe {
+            let mem = VirtualAlloc(
+                ptr::null_mut(),
+                4096,
+                MEM_COMMIT | MEM_RESERVE,
+                ProtectionFlags::PAGE_READWRITE,
+            );
+
+            if !mem.is_null() {
+                let address = Address::new(mem as usize);
+                let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+                let manager = ProtectionManager::new(handle);
+
+                let result = manager.make_executable(address, 4096);
+                assert!(result.is_ok());
+
+                let change = result.unwrap();
+                assert_eq!(change.new_protection.raw(), ProtectionFlags::PAGE_EXECUTE_READWRITE);
+
+                VirtualFree(mem, 0, MEM_RELEASE);
+            }
+        }
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_make_non_executable() {
+        use std::ptr;
+        use winapi::um::memoryapi::{VirtualAlloc, VirtualFree};
+        use winapi::um::winnt::{MEM_COMMIT, MEM_RELEASE, MEM_RESERVE};
+
+        unsafe {
+            let mem = VirtualAlloc(
+                ptr::null_mut(),
+                4096,
+                MEM_COMMIT | MEM_RESERVE,
+                ProtectionFlags::PAGE_EXECUTE_READWRITE,
+            );
+
+            if !mem.is_null() {
+                let address = Address::new(mem as usize);
+                let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+                let manager = ProtectionManager::new(handle);
+
+                let result = manager.make_non_executable(address, 4096);
+                assert!(result.is_ok());
+
+                let change = result.unwrap();
+                assert_eq!(change.new_protection.raw(), ProtectionFlags::PAGE_READWRITE);
+
+                VirtualFree(mem, 0, MEM_RELEASE);
+            }
+        }
+    }
+
+    #[test]
+    fn test_protection_flags_with_modifiers() {
+        let flags = ProtectionFlags::read_write();
+        let with_no_cache = flags.with_no_cache();
+        
+        assert!(with_no_cache.is_no_cache());
+        assert!(with_no_cache.is_readable());
+        assert!(with_no_cache.is_writable());
+    }
+
+    #[test]
+    fn test_protection_flags_combinations() {
+        // Test various protection flag combinations
+        let no_access = ProtectionFlags::no_access();
+        assert!(!no_access.is_readable());
+        assert!(!no_access.is_writable());
+        assert!(!no_access.is_executable());
+
+        let execute_only = ProtectionFlags::execute();
+        assert!(!execute_only.is_readable());
+        assert!(!execute_only.is_writable());
+        assert!(execute_only.is_executable());
+
+        let execute_read = ProtectionFlags::execute_read();
+        assert!(execute_read.is_readable());
+        assert!(!execute_read.is_writable());
+        assert!(execute_read.is_executable());
+    }
+
+    #[test]
+    fn test_protection_change_invalid_size() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let manager = ProtectionManager::new(handle);
+
+        // Test with zero size
+        let result = manager.change_protection(
+            Address::new(0x1000),
+            0,
+            ProtectionFlags::read_write(),
+        );
+        
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), MemoryError::InvalidValueType(_)));
+    }
 }

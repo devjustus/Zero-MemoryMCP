@@ -261,4 +261,97 @@ mod tests {
         // May fail depending on memory layout, but shouldn't panic
         let _ = result;
     }
+
+    #[test]
+    fn test_region_info_contains() {
+        let region = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x2000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+
+        // Test addresses within the region
+        assert!(region.contains(Address::new(0x1000))); // Start
+        assert!(region.contains(Address::new(0x1500))); // Middle
+        assert!(region.contains(Address::new(0x2FFF))); // Just before end
+        
+        // Test addresses outside the region
+        assert!(!region.contains(Address::new(0x0FFF))); // Before start
+        assert!(!region.contains(Address::new(0x3000))); // At end (exclusive)
+        assert!(!region.contains(Address::new(0x4000))); // After end
+    }
+
+    #[test]
+    fn test_region_info_executable_flags() {
+        // Test non-executable region
+        let non_exec = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04, // PAGE_READWRITE
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+        assert!(!non_exec.is_executable());
+
+        // Test executable regions
+        let exec_read = RegionInfo {
+            base_address: Address::new(0x2000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Image,
+            protection: 0x20, // PAGE_EXECUTE_READ
+            allocation_protection: 0x20,
+            allocation_base: Address::new(0x2000),
+        };
+        assert!(exec_read.is_executable());
+        assert!(exec_read.is_readable());
+        assert!(!exec_read.is_writable());
+    }
+
+    #[test]
+    fn test_region_info_guard_page() {
+        let guarded = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x104, // PAGE_READWRITE | PAGE_GUARD
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+        
+        assert!(guarded.is_guarded());
+        assert!(!guarded.is_readable()); // Guard pages are not readable
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_enumerator_set_addresses() {
+        let handle = ProcessHandle::open_for_read(std::process::id()).unwrap();
+        let mut enumerator = RegionEnumerator::new(handle);
+        
+        // Set custom start and max addresses
+        enumerator.set_start_address(Address::new(0x10000));
+        enumerator.set_max_address(Address::new(0x20000));
+        
+        // Try to get one region (may be none in this range)
+        let _ = enumerator.next();
+        // Test passes if no panic
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_enumerate_regions_function() {
+        // Test the standalone function
+        let result = enumerate_regions();
+        
+        // Should succeed (though may return empty on some systems)
+        assert!(result.is_ok());
+    }
 }

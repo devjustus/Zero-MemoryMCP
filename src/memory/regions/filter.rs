@@ -296,5 +296,165 @@ mod tests {
 
         let image_filter = presets::image_regions();
         assert_eq!(image_filter.region_type, Some(RegionType::Image));
+        
+        let stack_filter = presets::stack_regions();
+        assert!(stack_filter.readable_only);
+        assert!(stack_filter.writable_only);
+        assert_eq!(stack_filter.region_type, Some(RegionType::Private));
+        
+        let large_filter = presets::large_regions();
+        assert_eq!(large_filter.min_size, Some(1024 * 1024));
+        assert_eq!(large_filter.state, Some(RegionState::Committed));
+    }
+
+    #[test]
+    fn test_filter_count_and_total_size() {
+        let regions = vec![
+            RegionInfo {
+                base_address: Address::new(0x1000),
+                size: 4096,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x04,
+                allocation_protection: 0x04,
+                allocation_base: Address::new(0x1000),
+            },
+            RegionInfo {
+                base_address: Address::new(0x2000),
+                size: 8192,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x04,
+                allocation_protection: 0x04,
+                allocation_base: Address::new(0x2000),
+            },
+            RegionInfo {
+                base_address: Address::new(0x4000),
+                size: 16384,
+                state: RegionState::Reserved,
+                region_type: RegionType::Private,
+                protection: 0x01,
+                allocation_protection: 0x01,
+                allocation_base: Address::new(0x4000),
+            },
+        ];
+
+        let filter = RegionFilter::new(
+            FilterCriteria::new()
+                .with_state(RegionState::Committed)
+                .readable(),
+        );
+
+        assert_eq!(filter.count(&regions), 2);
+        assert_eq!(filter.total_size(&regions), 4096 + 8192);
+    }
+
+    #[test]
+    fn test_filter_address_range() {
+        let region = RegionInfo {
+            base_address: Address::new(0x2000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x2000),
+        };
+
+        // Region is at 0x2000-0x3000
+        let filter1 = RegionFilter::new(
+            FilterCriteria::new()
+                .with_address_range(Address::new(0x1000), Address::new(0x4000)),
+        );
+        assert!(filter1.matches(&region));
+
+        let filter2 = RegionFilter::new(
+            FilterCriteria::new()
+                .with_address_range(Address::new(0x3000), Address::new(0x5000)),
+        );
+        assert!(!filter2.matches(&region));
+    }
+
+    #[test]
+    fn test_filter_size_criteria() {
+        let small_region = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 1024,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+
+        let large_region = RegionInfo {
+            base_address: Address::new(0x2000),
+            size: 1024 * 1024,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x2000),
+        };
+
+        let filter = RegionFilter::new(
+            FilterCriteria::new()
+                .with_min_size(4096)
+                .with_max_size(1024 * 512),
+        );
+
+        assert!(!filter.matches(&small_region));
+        assert!(!filter.matches(&large_region));
+    }
+
+    #[test]
+    fn test_filter_guarded_pages() {
+        let guarded_region = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 4096,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x104, // PAGE_READWRITE | PAGE_GUARD
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+
+        let filter_exclude = RegionFilter::new(
+            FilterCriteria::new().exclude_guarded_pages(),
+        );
+        assert!(!filter_exclude.matches(&guarded_region));
+
+        let filter_include = RegionFilter::new(FilterCriteria::new());
+        assert!(filter_include.matches(&guarded_region));
+    }
+
+    #[test]
+    fn test_filter_apply() {
+        let regions = vec![
+            RegionInfo {
+                base_address: Address::new(0x1000),
+                size: 4096,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x20, // PAGE_EXECUTE_READ
+                allocation_protection: 0x20,
+                allocation_base: Address::new(0x1000),
+            },
+            RegionInfo {
+                base_address: Address::new(0x2000),
+                size: 8192,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x04, // PAGE_READWRITE
+                allocation_protection: 0x04,
+                allocation_base: Address::new(0x2000),
+            },
+        ];
+
+        let filter = RegionFilter::new(FilterCriteria::new().executable());
+        let filtered = filter.apply(&regions);
+        
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].base_address, Address::new(0x1000));
     }
 }
