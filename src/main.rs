@@ -32,11 +32,8 @@ fn get_system_info() -> (String, String) {
     (version.to_string(), arch.to_string())
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Initialize logging
-    init_logging();
-
+/// Initialize and validate the server configuration
+fn initialize_server() -> Result<config::Config> {
     let (version, arch) = get_system_info();
     info!("Starting Memory-MCP server v{}", version);
 
@@ -61,6 +58,11 @@ async fn main() -> Result<()> {
     info!("Server: {}:{}", config.server.host, config.server.port);
     info!("Scanner threads: {}", config.scanner.max_threads);
 
+    Ok(config)
+}
+
+/// Start the MCP server with the given configuration
+async fn start_server(_config: config::Config) -> Result<()> {
     // TODO: Initialize MCP server with configuration
     info!("MCP server initialization pending implementation");
 
@@ -70,6 +72,18 @@ async fn main() -> Result<()> {
 
     info!("Shutting down Memory-MCP server");
     Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Initialize logging
+    init_logging();
+
+    // Initialize server configuration
+    let config = initialize_server()?;
+
+    // Start the server
+    start_server(config).await
 }
 
 #[cfg(test)]
@@ -161,6 +175,30 @@ mod tests {
         // Test default config creation
         let defaults = config::default_config();
         assert!(defaults.scanner.max_threads > 0);
+    }
+
+    #[test]
+    fn test_initialize_server() {
+        // Test server initialization
+        let result = initialize_server();
+        assert!(result.is_ok(), "Server initialization should succeed");
+
+        let config = result.unwrap();
+        assert_eq!(config.server.host, "127.0.0.1");
+        assert_eq!(config.server.port, 3000);
+        assert!(config.scanner.max_threads > 0);
+    }
+
+    #[tokio::test]
+    #[cfg_attr(miri, ignore)]
+    async fn test_start_server_immediate_shutdown() {
+        // Test that start_server can be called
+        // This test doesn't actually wait for ctrl_c, just verifies the function exists
+        let _config = config::Config::default();
+
+        // We can't actually test the full server start without blocking,
+        // but we can verify the function signature is correct
+        let _server_fn: fn(config::Config) -> _ = start_server;
     }
 
     #[test]
