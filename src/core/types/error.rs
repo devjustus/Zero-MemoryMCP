@@ -57,6 +57,9 @@ pub enum MemoryError {
     #[error("Invalid handle: {0}")]
     InvalidHandle(String),
 
+    #[error("Process already attached: {0}")]
+    ProcessAlreadyAttached(u32),
+
     #[error("Windows API error: {0}")]
     WindowsApiError(#[from] windows::core::Error),
 

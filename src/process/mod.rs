@@ -6,10 +6,14 @@
 pub mod enumerator;
 pub mod handle;
 pub mod info;
+pub mod manager;
 
 pub use enumerator::{enumerate_processes, ProcessEnumerator};
 pub use handle::ProcessHandle;
 pub use info::{ProcessArchitecture, ProcessInfo};
+pub use manager::{
+    AttachOptions, AttachmentGuard, DetachOptions, ProcessAttacher, ProcessDetacher,
+};
 
 use crate::core::types::{MemoryError, MemoryResult};
 
