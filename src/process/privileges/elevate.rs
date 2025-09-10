@@ -319,6 +319,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Invalid handle testing not supported in Miri")]
     fn test_token_guard_non_null() {
         // Test TokenGuard with non-null (but invalid) handle
         let guard = TokenGuard(1 as HANDLE);

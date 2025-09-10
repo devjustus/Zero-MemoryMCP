@@ -301,6 +301,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Invalid handle testing not supported in Miri")]
     fn test_token_guard_creation() {
         // Test TokenGuard creation with various handles
         let guards = vec![
@@ -316,6 +317,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "Invalid handle testing not supported in Miri")]
     fn test_token_guard_drop_behavior() {
         // Test that drop is called properly
         {
