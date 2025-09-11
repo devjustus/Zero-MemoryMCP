@@ -88,6 +88,11 @@ mod tests {
         // Test the convenience function
         let result = get_all_regions();
         assert!(result.is_ok());
+        
+        // In test mode, should be limited to prevent CI timeout
+        if let Ok(regions) = result {
+            assert!(regions.len() <= 100, "Should limit regions in test mode");
+        }
     }
 
     #[test]
@@ -103,8 +108,9 @@ mod tests {
 
         // All returned regions should be committed and readable
         if let Ok(regions) = result {
-            for region in regions.iter().take(5) {
-                // Check first 5 to avoid timeout
+            // Only check first 5 regions to avoid timeout
+            let check_count = regions.len().min(5);
+            for region in regions.iter().take(check_count) {
                 assert_eq!(region.state, RegionState::Committed);
                 assert!(region.is_readable());
             }
