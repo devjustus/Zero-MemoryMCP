@@ -88,7 +88,7 @@ mod tests {
         // Test the convenience function
         let result = get_all_regions();
         assert!(result.is_ok());
-        
+
         // In test mode, should be limited to prevent CI timeout
         if let Ok(regions) = result {
             assert!(regions.len() <= 100, "Should limit regions in test mode");

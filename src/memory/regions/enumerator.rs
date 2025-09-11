@@ -362,7 +362,7 @@ mod tests {
 
         // Should succeed (though may return empty on some systems)
         assert!(result.is_ok());
-        
+
         // In test mode, should be limited to 100 regions max
         if let Ok(regions) = result {
             assert!(regions.len() <= 100, "Should limit regions in test mode");
