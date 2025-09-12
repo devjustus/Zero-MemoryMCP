@@ -510,6 +510,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_protection_change_invalid_size() {
         let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
         let manager = ProtectionManager::new(handle);
