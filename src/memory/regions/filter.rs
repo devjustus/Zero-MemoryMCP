@@ -453,4 +453,104 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].base_address, Address::new(0x1000));
     }
+
+    #[test]
+    fn test_filter_criteria_default() {
+        let criteria = FilterCriteria::default();
+        assert!(criteria.min_size.is_none());
+        assert!(criteria.max_size.is_none());
+        assert!(criteria.state.is_none());
+        assert!(criteria.region_type.is_none());
+        assert!(!criteria.readable_only);
+        assert!(!criteria.writable_only);
+        assert!(!criteria.executable_only);
+        assert!(criteria.address_range.is_none());
+        assert!(!criteria.exclude_guarded);
+        assert!(!criteria.committed_only);
+    }
+
+    #[test]
+    fn test_filter_criteria_builder_chaining() {
+        let criteria = FilterCriteria::new()
+            .with_min_size(1024)
+            .with_max_size(4096)
+            .with_state(RegionState::Reserved)
+            .with_type(RegionType::Mapped)
+            .with_address_range(Address::new(0x1000), Address::new(0x5000))
+            .exclude_guarded_pages()
+            .committed_memory_only();
+
+        assert_eq!(criteria.min_size, Some(1024));
+        assert_eq!(criteria.max_size, Some(4096));
+        assert_eq!(criteria.state, Some(RegionState::Reserved));
+        assert_eq!(criteria.region_type, Some(RegionType::Mapped));
+        assert_eq!(
+            criteria.address_range,
+            Some((Address::new(0x1000), Address::new(0x5000)))
+        );
+        assert!(criteria.exclude_guarded);
+        assert!(criteria.committed_only);
+    }
+
+    #[test]
+    fn test_region_state_equality() {
+        assert_eq!(RegionState::Committed, RegionState::Committed);
+        assert_ne!(RegionState::Committed, RegionState::Reserved);
+        assert_ne!(RegionState::Reserved, RegionState::Free);
+        assert_ne!(RegionState::Free, RegionState::Committed);
+    }
+
+    #[test]
+    fn test_region_type_equality() {
+        assert_eq!(RegionType::Private, RegionType::Private);
+        assert_ne!(RegionType::Private, RegionType::Mapped);
+        assert_ne!(RegionType::Mapped, RegionType::Image);
+        assert_ne!(RegionType::Image, RegionType::Private);
+    }
+
+    #[test]
+    fn test_filter_complex_criteria() {
+        let regions = vec![
+            RegionInfo {
+                base_address: Address::new(0x1000),
+                size: 512,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x04,
+                allocation_protection: 0x04,
+                allocation_base: Address::new(0x1000),
+            },
+            RegionInfo {
+                base_address: Address::new(0x2000),
+                size: 2048,
+                state: RegionState::Committed,
+                region_type: RegionType::Private,
+                protection: 0x04,
+                allocation_protection: 0x04,
+                allocation_base: Address::new(0x2000),
+            },
+            RegionInfo {
+                base_address: Address::new(0x3000),
+                size: 4096,
+                state: RegionState::Reserved,
+                region_type: RegionType::Private,
+                protection: 0x01,
+                allocation_protection: 0x01,
+                allocation_base: Address::new(0x3000),
+            },
+        ];
+
+        // Complex filter: committed, readable, size between 1KB and 3KB
+        let filter = RegionFilter::new(
+            FilterCriteria::new()
+                .with_min_size(1024)
+                .with_max_size(3072)
+                .with_state(RegionState::Committed)
+                .readable(),
+        );
+
+        let filtered = filter.apply(&regions);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].size, 2048);
+    }
 }

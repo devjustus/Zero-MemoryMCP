@@ -430,6 +430,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_drop() {
         // Test that MappedRegion cleans up on drop
         {
@@ -496,5 +497,94 @@ mod tests {
         assert_eq!(region.size, 4096);
         assert_eq!(region.access, MappingAccess::ReadWrite);
         assert!(!region.is_file_mapping);
+    }
+
+    #[test]
+    fn test_mapped_region_as_ptr() {
+        let region = MappedRegion {
+            base_address: Address::new(0x2000),
+            size: 4096,
+            access: MappingAccess::ReadOnly,
+            mapping_handle: None,
+            is_file_mapping: false,
+        };
+
+        let ptr = region.as_ptr();
+        assert_eq!(ptr as usize, 0x2000);
+    }
+
+    #[test]
+    fn test_mapped_region_as_mut_ptr() {
+        let mut region = MappedRegion {
+            base_address: Address::new(0x3000),
+            size: 4096,
+            access: MappingAccess::ReadWrite,
+            mapping_handle: None,
+            is_file_mapping: false,
+        };
+
+        let ptr = region.as_mut_ptr();
+        assert_eq!(ptr as usize, 0x3000);
+    }
+
+    #[test]
+    fn test_mapped_region_contains() {
+        let region = MappedRegion {
+            base_address: Address::new(0x1000),
+            size: 0x2000,
+            access: MappingAccess::ReadOnly,
+            mapping_handle: None,
+            is_file_mapping: false,
+        };
+
+        // Test addresses within the region
+        assert!(region.contains(Address::new(0x1000))); // Start
+        assert!(region.contains(Address::new(0x1500))); // Middle
+        assert!(region.contains(Address::new(0x2FFF))); // Just before end
+
+        // Test addresses outside the region
+        assert!(!region.contains(Address::new(0x0FFF))); // Before start
+        assert!(!region.contains(Address::new(0x3000))); // At end (exclusive)
+        assert!(!region.contains(Address::new(0x4000))); // After end
+    }
+
+    #[test]
+    fn test_mapped_region_flush_non_file_mapping() {
+        let region = MappedRegion {
+            base_address: Address::new(0x1000),
+            size: 4096,
+            access: MappingAccess::ReadWrite,
+            mapping_handle: None,
+            is_file_mapping: false,
+        };
+
+        // Flush should succeed for non-file mappings (no-op)
+        let result = region.flush();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_mapping_options_builder_pattern() {
+        let options = MappingOptions::default().size;
+        assert_eq!(options, 0);
+
+        let options = MappingOptions {
+            access: MappingAccess::ReadWriteExecute,
+            size: 8192,
+            offset: 512,
+            preferred_address: Some(Address::new(0x50000)),
+        };
+        assert_eq!(options.access, MappingAccess::ReadWriteExecute);
+        assert_eq!(options.size, 8192);
+        assert_eq!(options.offset, 512);
+        assert_eq!(options.preferred_address, Some(Address::new(0x50000)));
+    }
+
+    #[test]
+    fn test_mapping_access_equality() {
+        assert_eq!(MappingAccess::ReadOnly, MappingAccess::ReadOnly);
+        assert_ne!(MappingAccess::ReadOnly, MappingAccess::ReadWrite);
+        assert_ne!(MappingAccess::ReadWrite, MappingAccess::ReadWriteExecute);
+        assert_ne!(MappingAccess::ReadWriteExecute, MappingAccess::CopyOnWrite);
     }
 }

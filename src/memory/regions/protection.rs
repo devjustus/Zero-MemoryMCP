@@ -524,4 +524,83 @@ mod tests {
             MemoryError::InvalidValueType(_)
         ));
     }
+
+    #[test]
+    fn test_protection_flags_raw_value() {
+        let flags = ProtectionFlags::new(0x40);
+        assert_eq!(flags.raw(), 0x40);
+        assert!(flags.is_executable());
+        assert!(flags.is_readable());
+        assert!(flags.is_writable());
+    }
+
+    #[test]
+    fn test_protection_flags_format_string() {
+        let flags = ProtectionFlags::new(0x01);
+        assert_eq!(format!("{}", flags), "NOACCESS");
+
+        let flags = ProtectionFlags::new(0x08);
+        assert_eq!(format!("{}", flags), "WC");
+
+        let flags = ProtectionFlags::new(0x80);
+        assert_eq!(format!("{}", flags), "WCX");
+
+        let flags_with_mods = ProtectionFlags::new(0x204); // RW + NOCACHE
+        assert_eq!(format!("{}", flags_with_mods), "RW+NC");
+
+        // Test unknown protection value (only in low byte to avoid modifiers)
+        let unknown = ProtectionFlags::new(0x99);
+        assert_eq!(format!("{}", unknown), "UNKNOWN");
+    }
+
+    #[test]
+    fn test_protection_change_debug() {
+        let change = ProtectionChange {
+            address: Address::new(0x1000),
+            size: 4096,
+            old_protection: ProtectionFlags::read_only(),
+            new_protection: ProtectionFlags::read_write(),
+        };
+
+        // Test Debug trait implementation
+        let debug_str = format!("{:?}", change);
+        assert!(debug_str.contains("ProtectionChange"));
+        // Check that the values appear in some form
+        assert!(debug_str.contains("address") || debug_str.contains("Address"));
+        assert!(debug_str.contains("size") || debug_str.contains("4096"));
+    }
+
+    #[test]
+    fn test_protection_flags_edge_cases() {
+        // Test execute-only flag
+        let exec_only = ProtectionFlags::execute();
+        assert!(exec_only.is_executable());
+        assert!(!exec_only.is_readable()); // Execute-only is not readable
+        assert!(!exec_only.is_writable());
+
+        // Test write-copy flag
+        let write_copy = ProtectionFlags::new(ProtectionFlags::PAGE_WRITECOPY);
+        assert!(write_copy.is_writable());
+        assert!(write_copy.is_readable());
+
+        // Test execute-write-copy flag
+        let exec_write_copy = ProtectionFlags::new(ProtectionFlags::PAGE_EXECUTE_WRITECOPY);
+        assert!(exec_write_copy.is_executable());
+        assert!(exec_write_copy.is_writable());
+        assert!(exec_write_copy.is_readable());
+    }
+
+    #[test]
+    fn test_protection_flags_with_write_combine() {
+        let flags = ProtectionFlags::read_write();
+        let with_write_combine =
+            ProtectionFlags::new(flags.raw() | ProtectionFlags::PAGE_WRITECOMBINE);
+
+        assert!(with_write_combine.is_readable());
+        assert!(with_write_combine.is_writable());
+        assert_eq!(
+            with_write_combine.raw() & ProtectionFlags::PAGE_WRITECOMBINE,
+            ProtectionFlags::PAGE_WRITECOMBINE
+        );
+    }
 }

@@ -368,4 +368,123 @@ mod tests {
             assert!(regions.len() <= 100, "Should limit regions in test mode");
         }
     }
+
+    #[test]
+    fn test_region_state_debug() {
+        // Test Debug trait implementation
+        let state = RegionState::Committed;
+        let debug_str = format!("{:?}", state);
+        assert_eq!(debug_str, "Committed");
+
+        let state = RegionState::Reserved;
+        let debug_str = format!("{:?}", state);
+        assert_eq!(debug_str, "Reserved");
+
+        let state = RegionState::Free;
+        let debug_str = format!("{:?}", state);
+        assert_eq!(debug_str, "Free");
+    }
+
+    #[test]
+    fn test_region_type_debug() {
+        // Test Debug trait implementation
+        let region_type = RegionType::Private;
+        let debug_str = format!("{:?}", region_type);
+        assert_eq!(debug_str, "Private");
+
+        let region_type = RegionType::Mapped;
+        let debug_str = format!("{:?}", region_type);
+        assert_eq!(debug_str, "Mapped");
+
+        let region_type = RegionType::Image;
+        let debug_str = format!("{:?}", region_type);
+        assert_eq!(debug_str, "Image");
+    }
+
+    #[test]
+    fn test_region_info_clone() {
+        let region = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x2000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+
+        let cloned = region.clone();
+        assert_eq!(cloned.base_address, region.base_address);
+        assert_eq!(cloned.size, region.size);
+        assert_eq!(cloned.state, region.state);
+        assert_eq!(cloned.region_type, region.region_type);
+        assert_eq!(cloned.protection, region.protection);
+        assert_eq!(cloned.allocation_protection, region.allocation_protection);
+        assert_eq!(cloned.allocation_base, region.allocation_base);
+    }
+
+    #[test]
+    fn test_region_info_debug() {
+        let region = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x2000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x04,
+            allocation_protection: 0x04,
+            allocation_base: Address::new(0x1000),
+        };
+
+        let debug_str = format!("{:?}", region);
+        assert!(debug_str.contains("RegionInfo"));
+        // Check that the address appears in some form
+        assert!(debug_str.contains("base_address") || debug_str.contains("Address"));
+        assert!(debug_str.contains("Committed"));
+        assert!(debug_str.contains("Private"));
+    }
+
+    #[test]
+    fn test_region_info_protection_checks() {
+        // Test no access
+        let no_access = RegionInfo {
+            base_address: Address::new(0x1000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x01, // PAGE_NOACCESS
+            allocation_protection: 0x01,
+            allocation_base: Address::new(0x1000),
+        };
+        assert!(!no_access.is_readable());
+        assert!(!no_access.is_writable());
+        assert!(!no_access.is_executable());
+
+        // Test write-copy
+        let write_copy = RegionInfo {
+            base_address: Address::new(0x2000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Private,
+            protection: 0x08, // PAGE_WRITECOPY
+            allocation_protection: 0x08,
+            allocation_base: Address::new(0x2000),
+        };
+        assert!(write_copy.is_readable());
+        assert!(write_copy.is_writable());
+        assert!(!write_copy.is_executable());
+
+        // Test execute
+        let execute = RegionInfo {
+            base_address: Address::new(0x3000),
+            size: 0x1000,
+            state: RegionState::Committed,
+            region_type: RegionType::Image,
+            protection: 0x10, // PAGE_EXECUTE
+            allocation_protection: 0x10,
+            allocation_base: Address::new(0x3000),
+        };
+        assert!(execute.is_readable()); // Not PAGE_NOACCESS, so considered readable
+        assert!(!execute.is_writable());
+        assert!(execute.is_executable());
+    }
 }
