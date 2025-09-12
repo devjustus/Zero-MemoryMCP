@@ -484,6 +484,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_fields() {
         let region = MappedRegion {
             base_address: Address::new(0x1000),
@@ -500,6 +501,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_as_ptr() {
         let region = MappedRegion {
             base_address: Address::new(0x2000),
@@ -514,6 +516,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_as_mut_ptr() {
         let mut region = MappedRegion {
             base_address: Address::new(0x3000),
@@ -528,6 +531,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_contains() {
         let region = MappedRegion {
             base_address: Address::new(0x1000),
@@ -549,6 +553,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
     fn test_mapped_region_flush_non_file_mapping() {
         let region = MappedRegion {
             base_address: Address::new(0x1000),
