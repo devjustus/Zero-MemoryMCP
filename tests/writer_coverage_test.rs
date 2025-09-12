@@ -268,7 +268,7 @@ mod safe_writer_coverage {
             .restore_from_backup(Address::new(0x1000), &[1, 2, 3, 4])
             .is_err());
         assert!(writer
-            .restore_from_backup(Address::new(0x1000), &vec![0; 100])
+            .restore_from_backup(Address::new(0x1000), &[0; 100])
             .is_err());
     }
 

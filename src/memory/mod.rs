@@ -7,10 +7,16 @@
 //! - Basic pattern scanning
 
 pub mod reader;
+pub mod regions;
 pub mod scanner;
 pub mod writer;
 
 pub use reader::{BasicMemoryReader, MemoryReader, ReadCache, Reader, SafeMemoryReader};
+pub use regions::{
+    enumerate_regions, query_region, FilterCriteria, MappedRegion, MappingOptions, MemoryMapper,
+    ProtectionFlags, ProtectionManager, RegionEnumerator, RegionFilter, RegionInfo, RegionState,
+    RegionType,
+};
 pub use scanner::{ComparisonType, MemoryScanner, ScanOptions, ScanPattern};
 pub use writer::{create_safe_writer, create_writer, BasicMemoryWriter, SafeMemoryWriter};
 
