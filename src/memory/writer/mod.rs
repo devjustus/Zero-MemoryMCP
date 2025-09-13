@@ -5,10 +5,13 @@
 //! - Safe writing with validation
 //! - Batch operations
 //! - Memory manipulation utilities
+//! - Automatic backup and restore
 
+pub mod backup;
 pub mod basic;
 pub mod safe;
 
+pub use backup::{BackupConfig, BackupEntry, MemoryBackup};
 pub use basic::BasicMemoryWriter;
 pub use safe::SafeMemoryWriter;
 
