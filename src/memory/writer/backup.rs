@@ -373,4 +373,267 @@ mod tests {
         assert_eq!(cloned.original_data, vec![1, 2, 3]);
         assert_eq!(cloned.process_id, 5678);
     }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_backup_before_write_with_auto_backup() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Test with auto_backup enabled (default)
+        assert!(backup.config().auto_backup);
+        let result = backup.backup_before_write(Address::new(0x1000), 100);
+        // Will fail because we can't read from arbitrary address, but that's expected
+        assert!(result.is_err() || backup.count() == 1);
+
+        // Test with auto_backup disabled
+        backup.set_auto_backup(false);
+        assert!(!backup.config().auto_backup);
+        backup.clear();
+        let result = backup.backup_before_write(Address::new(0x2000), 100);
+        assert!(result.is_ok());
+        assert_eq!(backup.count(), 0); // Should not create backup when disabled
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_set_max_entries_and_trim() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Create mock entries to test trimming
+        for i in 0..10 {
+            let entry = BackupEntry::new(
+                Address::new(0x1000 + i * 0x100),
+                vec![i as u8; 10],
+                handle.pid(),
+                Some(format!("Backup {}", i)),
+            );
+            backup.entries.push_back(entry);
+        }
+
+        assert_eq!(backup.count(), 10);
+
+        // Set max entries to 5, should trim oldest entries
+        backup.set_max_entries(5);
+        assert_eq!(backup.count(), 5);
+
+        // Verify the oldest entries were removed
+        let first_entry = backup.entries.front().unwrap();
+        assert_eq!(first_entry.description, Some("Backup 5".to_string()));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_find_backup() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Add test entries
+        let entry1 = BackupEntry::new(
+            Address::new(0x1000),
+            vec![1, 2, 3],
+            handle.pid(),
+            Some("Entry 1".to_string()),
+        );
+        let entry2 = BackupEntry::new(
+            Address::new(0x2000),
+            vec![4, 5, 6],
+            handle.pid(),
+            Some("Entry 2".to_string()),
+        );
+        let entry3 = BackupEntry::new(
+            Address::new(0x1000), // Same address as entry1
+            vec![7, 8, 9],
+            handle.pid(),
+            Some("Entry 3".to_string()),
+        );
+
+        backup.entries.push_back(entry1);
+        backup.entries.push_back(entry2);
+        backup.entries.push_back(entry3);
+
+        // Should find the most recent backup for address 0x1000
+        let found = backup.find_backup(Address::new(0x1000));
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().description, Some("Entry 3".to_string()));
+
+        // Should find backup for address 0x2000
+        let found = backup.find_backup(Address::new(0x2000));
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().description, Some("Entry 2".to_string()));
+
+        // Should not find backup for non-existent address
+        let found = backup.find_backup(Address::new(0x3000));
+        assert!(found.is_none());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_find_backup_for_range() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Add test entry with 256 bytes
+        let entry = BackupEntry::new(
+            Address::new(0x1000),
+            vec![0; 256],
+            handle.pid(),
+            Some("Range entry".to_string()),
+        );
+        backup.entries.push_back(entry);
+
+        // Should find backup containing the range
+        let found = backup.find_backup_for_range(Address::new(0x1000), 100);
+        assert!(found.is_some());
+
+        let found = backup.find_backup_for_range(Address::new(0x1050), 50);
+        assert!(found.is_some());
+
+        // Should not find backup for out-of-range address
+        let found = backup.find_backup_for_range(Address::new(0x2000), 100);
+        assert!(found.is_none());
+
+        // Should not find backup for range extending beyond backup
+        let found = backup.find_backup_for_range(Address::new(0x1000), 300);
+        assert!(found.is_none());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_clear_backups() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Add some entries
+        for i in 0..5 {
+            let entry = BackupEntry::new(
+                Address::new(0x1000 + i * 0x100),
+                vec![i as u8; 10],
+                handle.pid(),
+                None,
+            );
+            backup.entries.push_back(entry);
+        }
+
+        assert_eq!(backup.count(), 5);
+        assert!(backup.total_size() > 0);
+
+        // Clear all entries
+        backup.clear();
+        assert_eq!(backup.count(), 0);
+        assert_eq!(backup.total_size(), 0);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_restore_entry_wrong_process() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let backup = MemoryBackup::new(&handle);
+
+        // Create entry for different process
+        let entry = BackupEntry::new(
+            Address::new(0x1000),
+            vec![1, 2, 3],
+            9999, // Different PID
+            None,
+        );
+
+        let result = backup.restore_entry(&entry);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            MemoryError::UnsupportedOperation(_)
+        ));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_restore_last_empty() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let backup = MemoryBackup::new(&handle);
+
+        let result = backup.restore_last();
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            MemoryError::SessionNotFound(_)
+        ));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_restore_all_empty() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let backup = MemoryBackup::new(&handle);
+
+        // Should succeed even with no entries
+        let result = backup.restore_all();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_entries_getter() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Initially empty
+        assert_eq!(backup.entries().len(), 0);
+
+        // Add an entry
+        let entry = BackupEntry::new(Address::new(0x1000), vec![1, 2, 3], handle.pid(), None);
+        backup.entries.push_back(entry);
+
+        // Check entries
+        assert_eq!(backup.entries().len(), 1);
+        let first = backup.entries().front().unwrap();
+        assert_eq!(first.address, Address::new(0x1000));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_config_mut() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Modify config through config_mut
+        backup.config_mut().max_entries = 200;
+        backup.config_mut().auto_backup = false;
+        backup.config_mut().compress = true;
+
+        // Verify changes
+        assert_eq!(backup.config().max_entries, 200);
+        assert!(!backup.config().auto_backup);
+        assert!(backup.config().compress);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore = "FFI not supported in Miri")]
+    fn test_total_size_calculation() {
+        let handle = ProcessHandle::open_for_read_write(std::process::id()).unwrap();
+        let mut backup = MemoryBackup::new(&handle);
+
+        // Add entries with known sizes
+        backup.entries.push_back(BackupEntry::new(
+            Address::new(0x1000),
+            vec![0; 100],
+            handle.pid(),
+            None,
+        ));
+        backup.entries.push_back(BackupEntry::new(
+            Address::new(0x2000),
+            vec![0; 200],
+            handle.pid(),
+            None,
+        ));
+        backup.entries.push_back(BackupEntry::new(
+            Address::new(0x3000),
+            vec![0; 300],
+            handle.pid(),
+            None,
+        ));
+
+        assert_eq!(backup.total_size(), 600);
+    }
 }
