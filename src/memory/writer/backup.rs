@@ -636,4 +636,244 @@ mod tests {
 
         assert_eq!(backup.total_size(), 600);
     }
+
+    // Additional tests that don't require FFI for better coverage
+    
+    #[test]
+    fn test_backup_entry_size_method() {
+        let entry = BackupEntry::new(
+            Address::new(0x5000),
+            vec![0; 512],
+            9999,
+            Some("Large backup".to_string()),
+        );
+        assert_eq!(entry.size(), 512);
+        
+        let empty_entry = BackupEntry::new(
+            Address::new(0x6000),
+            vec![],
+            9999,
+            None,
+        );
+        assert_eq!(empty_entry.size(), 0);
+    }
+
+    #[test]
+    fn test_backup_entry_timestamp() {
+        let before = SystemTime::now();
+        let entry = BackupEntry::new(
+            Address::new(0x7000),
+            vec![1, 2, 3],
+            1111,
+            None,
+        );
+        let after = SystemTime::now();
+        
+        // Verify timestamp is within reasonable bounds
+        assert!(entry.timestamp >= before);
+        assert!(entry.timestamp <= after);
+    }
+
+    #[test]
+    fn test_backup_config_fields() {
+        let mut config = BackupConfig {
+            max_entries: 42,
+            auto_backup: false,
+            compress: true,
+        };
+        
+        assert_eq!(config.max_entries, 42);
+        assert!(!config.auto_backup);
+        assert!(config.compress);
+        
+        // Modify fields
+        config.max_entries = 100;
+        config.auto_backup = true;
+        config.compress = false;
+        
+        assert_eq!(config.max_entries, 100);
+        assert!(config.auto_backup);
+        assert!(!config.compress);
+    }
+
+    #[test]
+    fn test_backup_entry_contains_range_edge_cases() {
+        let entry = BackupEntry::new(
+            Address::new(0x2000),
+            vec![0; 100],
+            5555,
+            None,
+        );
+        
+        // Exact match
+        assert!(entry.contains_range(Address::new(0x2000), 100));
+        
+        // Start at beginning, partial size
+        assert!(entry.contains_range(Address::new(0x2000), 50));
+        
+        // Start in middle, fits within
+        assert!(entry.contains_range(Address::new(0x2010), 80));
+        
+        // Start before entry
+        assert!(!entry.contains_range(Address::new(0x1FFF), 10));
+        
+        // Extends past end
+        assert!(!entry.contains_range(Address::new(0x2050), 60));
+        
+        // Zero size
+        assert!(entry.contains_range(Address::new(0x2000), 0));
+        assert!(entry.contains_range(Address::new(0x2050), 0));
+    }
+
+    #[test]
+    fn test_trim_entries_logic() {
+        // Create a mock backup with direct access to entries
+        let mut entries: VecDeque<BackupEntry> = VecDeque::new();
+        
+        // Add 10 entries
+        for i in 0..10 {
+            entries.push_back(BackupEntry::new(
+                Address::new(0x1000 * (i + 1)),
+                vec![i as u8; 10],
+                1234,
+                Some(format!("Entry {}", i)),
+            ));
+        }
+        
+        assert_eq!(entries.len(), 10);
+        
+        // Simulate trimming to max 5
+        let max_entries = 5;
+        while entries.len() > max_entries {
+            entries.pop_front();
+        }
+        
+        assert_eq!(entries.len(), 5);
+        
+        // Check that oldest were removed
+        let first = entries.front().unwrap();
+        assert_eq!(first.description, Some("Entry 5".to_string()));
+        
+        let last = entries.back().unwrap();
+        assert_eq!(last.description, Some("Entry 9".to_string()));
+    }
+
+    #[test]
+    fn test_backup_entry_all_fields() {
+        let data = vec![0xFF, 0xEE, 0xDD, 0xCC];
+        let entry = BackupEntry {
+            address: Address::new(0xABCD),
+            original_data: data.clone(),
+            timestamp: SystemTime::UNIX_EPOCH,
+            process_id: 4321,
+            description: Some("Custom entry".to_string()),
+        };
+        
+        assert_eq!(entry.address.as_usize(), 0xABCD);
+        assert_eq!(entry.original_data, data);
+        assert_eq!(entry.timestamp, SystemTime::UNIX_EPOCH);
+        assert_eq!(entry.process_id, 4321);
+        assert_eq!(entry.description, Some("Custom entry".to_string()));
+        assert_eq!(entry.size(), 4);
+    }
+
+    #[test]
+    fn test_backup_entry_no_description() {
+        let entry = BackupEntry::new(
+            Address::new(0x9000),
+            vec![0xAA],
+            7777,
+            None,
+        );
+        
+        assert_eq!(entry.description, None);
+    }
+
+    #[test]
+    fn test_vecdeque_operations() {
+        let mut entries: VecDeque<BackupEntry> = VecDeque::new();
+        
+        // Test push_back
+        entries.push_back(BackupEntry::new(
+            Address::new(0x100),
+            vec![1],
+            111,
+            Some("First".to_string()),
+        ));
+        
+        entries.push_back(BackupEntry::new(
+            Address::new(0x200),
+            vec![2],
+            222,
+            Some("Second".to_string()),
+        ));
+        
+        assert_eq!(entries.len(), 2);
+        
+        // Test iteration
+        let mut count = 0;
+        for _ in entries.iter() {
+            count += 1;
+        }
+        assert_eq!(count, 2);
+        
+        // Test reverse iteration
+        let mut reverse_count = 0;
+        for entry in entries.iter().rev() {
+            reverse_count += 1;
+            if reverse_count == 1 {
+                assert_eq!(entry.description, Some("Second".to_string()));
+            }
+        }
+        assert_eq!(reverse_count, 2);
+        
+        // Test pop_front
+        let first = entries.pop_front();
+        assert!(first.is_some());
+        assert_eq!(first.unwrap().description, Some("First".to_string()));
+        assert_eq!(entries.len(), 1);
+        
+        // Test clear
+        entries.clear();
+        assert_eq!(entries.len(), 0);
+        assert!(entries.is_empty());
+    }
+
+    #[test]
+    fn test_backup_entry_large_data() {
+        let large_data = vec![0xAB; 10000];
+        let entry = BackupEntry::new(
+            Address::new(0xF000),
+            large_data.clone(),
+            8888,
+            Some("Large data test".to_string()),
+        );
+        
+        assert_eq!(entry.original_data.len(), 10000);
+        assert_eq!(entry.size(), 10000);
+        assert_eq!(entry.original_data, large_data);
+    }
+
+    #[test]
+    fn test_address_calculations() {
+        let entry = BackupEntry::new(
+            Address::new(0x4000),
+            vec![0; 0x100],
+            3333,
+            None,
+        );
+        
+        // Test address arithmetic for contains_range
+        let start_addr = entry.address.as_usize();
+        let end_addr = start_addr + entry.original_data.len();
+        
+        assert_eq!(start_addr, 0x4000);
+        assert_eq!(end_addr, 0x4100);
+        
+        // Test range that starts at exact end (should not be contained)
+        assert!(!entry.contains_range(Address::new(0x4100), 1));
+        
+        // Test range that ends at exact end (should be contained)
+        assert!(entry.contains_range(Address::new(0x40FF), 1));
+    }
 }
